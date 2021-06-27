@@ -56,16 +56,16 @@ services:
     networks: 
       - howto-debeizum-to-snowflake_db-network
   
-  connect:
+  cdc_connect:
     image: debezium/connect:${DEBEZIUM_VERSION}
     ports: 
       - "8083:8083"
     environment: 
       BOOTSTRAP_SERVERS: kafka:9092
       GROUP_ID: 1
-      CONFIG_STORAGE_TOPIC: my_connect_configs
-      OFFSET_STORAGE_TOPIC: my_connect_offsets
-      STATUS_STORAGE_TOPIC: my_connect_statuses
+      CONFIG_STORAGE_TOPIC: my_cdc_connect_configs
+      OFFSET_STORAGE_TOPIC: my_cdc_connect_offsets
+      STATUS_STORAGE_TOPIC: my_cdc_connect_statuses
     depends_on: 
       - zookeeper
       - kafka
@@ -79,6 +79,45 @@ services:
     networks:
       - howto-debeizum-to-snowflake_kafka-network
       - howto-debeizum-to-snowflake_db-network
+
+  sink_connect:
+    image: confluentinc/cp-kafka-connect-base:${CONFLUENT_VERSION}
+    ports: 
+      - "9093:8083"
+    environment: 
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
+      CONNECT_REST_PORT: 8083
+      CONNECT_REST_ADVERTISED_HOST_NAME: "localhost"
+      CONNECT_GROUP_ID: kafka-connect-sink
+      CONNECT_CONFIG_STORAGE_TOPIC: my_sink_connect_configs
+      CONNECT_OFFSET_STORAGE_TOPIC: my_sink_connect_offsets
+      CONNECT_STATUS_STORAGE_TOPIC: my_sink_connect_statuses
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+    depends_on: 
+      - zookeeper
+      - kafka
+    links:
+      - zookeeper:zookeeper
+      - kafka:kafka
+    networks:
+      - howto-debeizum-to-snowflake_kafka-network
+    # https://github.com/confluentinc/demo-scene/blob/master/kafka-connect-zero-to-hero/docker-compose.yml#L89-L101
+    command:
+      - bash
+      - -c
+      - |
+        echo "Installing Connector"
+        confluent-hub install --no-prompt snowflakeinc/snowflake-kafka-connector:1.5.5
+        confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.2.0
+        #
+        echo "Launching Kafka Connect worker"
+        /etc/confluent/docker/run &
+        #
+        sleep infinity
 
 networks: 
   howto-debeizum-to-snowflake_kafka-network: 
