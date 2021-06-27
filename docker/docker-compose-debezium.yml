@@ -14,6 +14,11 @@ services:
     networks:
       - howto-debeizum-to-snowflake_kafka-network
 
+  # After start CDC, you can consume the events using this command
+  # MySQL: 
+  #   docker-compose -f docker-compose-debezium.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic dbserver1.inventory.pet
+  # Postgres:
+  #   docker-compose -f docker-compose-debezium.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic dbserver1.inventory.accounts
   kafka:
     image: debezium/kafka:${DEBEZIUM_VERSION}
     ports:
