@@ -1,4 +1,6 @@
 # Based on https://debezium.io/documentation/reference/1.5/tutorial.html
+# Run as:
+#   docker-compose -f docker-compose-debezium.yml
 ---
 version: "2"
 services:
@@ -26,6 +28,7 @@ services:
     networks:
       - howto-debeizum-to-snowflake_kafka-network
 
+  # docker-compose -f docker-compose-debezium.yml exec mysql bash -c 'mysql -u $MYSQL_USER -p$MYSQL_PASSWORD inventory'
   mysql:
     image: debezium/example-mysql:${DEBEZIUM_VERSION}
     ports: 
@@ -36,7 +39,18 @@ services:
       MYSQL_PASSWORD: mysqlpw
     networks: 
       - howto-debeizum-to-snowflake_db-network
-
+  
+  # docker-compose -f docker-compose-debezium.yml exec postgres env PGOPTIONS="--search_path=inventory" bash -c 'psql -U $POSTGRES_USER postgres'
+  postgres:
+    image: debezium/example-postgres:${DEBEZIUM_VERSION}
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres  
+    networks: 
+      - howto-debeizum-to-snowflake_db-network
+  
   connect:
     image: debezium/connect:${DEBEZIUM_VERSION}
     ports: 
@@ -51,10 +65,12 @@ services:
       - zookeeper
       - kafka
       - mysql
+      - postgres
     links:
       - zookeeper:zookeeper
       - kafka:kafka
       - mysql:mysql
+      - postgres:postgres
     networks:
       - howto-debeizum-to-snowflake_kafka-network
       - howto-debeizum-to-snowflake_db-network
