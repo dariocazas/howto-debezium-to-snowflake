@@ -1,6 +1,6 @@
 # Based on https://debezium.io/documentation/reference/1.5/tutorial.html
 # Run as:
-#   docker-compose -f docker-compose-debezium.yml
+#   docker-compose -f docker-compose-debezium.yml up
 ---
 version: "2"
 services:
