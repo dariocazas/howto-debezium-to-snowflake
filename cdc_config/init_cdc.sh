@@ -18,3 +18,5 @@ curl -i -X POST $CONNECT_URL/connectors \
     -H "Content-Type:application/json" \
     -d @$POSTGRES_CONNECT_CONFIG
 echo .
+
+
