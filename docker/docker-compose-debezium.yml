@@ -8,21 +8,23 @@ services:
   zookeeper:
     image: debezium/zookeeper:${DEBEZIUM_VERSION}
     ports:
-      - "2181:2181"
-      - "2888:2888"
-      - "3888:3888"
+      - 2181:2181
+      - 2888:2888
+      - 3888:3888
     networks:
       - howto-debeizum-to-snowflake_kafka-network
 
+  # You can list the existing topics with
+  #   docker-compose -f docker-compose-debezium.yml exec kafka /kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
   # After start CDC, you can consume the events using this command
   # MySQL: 
-  #   docker-compose -f docker-compose-debezium.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic dbserver1.inventory.pet
+  #   docker-compose -f docker-compose-debezium.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic mysqldb.inventory.pet
   # Postgres:
-  #   docker-compose -f docker-compose-debezium.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic dbserver1.inventory.accounts
+  #   docker-compose -f docker-compose-debezium.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic postgresdb.inventory.accounts
   kafka:
     image: debezium/kafka:${DEBEZIUM_VERSION}
     ports:
-      - "9092:9092"
+      - 9092:9092
     environment: 
       #ADVERTISED_HOST_NAME: localhost
       ZOOKEEPER_CONNECT: zookeeper:2181
@@ -59,13 +61,18 @@ services:
   cdc_connect:
     image: debezium/connect:${DEBEZIUM_VERSION}
     ports: 
-      - "8083:8083"
+      - 8083:8083      
     environment: 
       BOOTSTRAP_SERVERS: kafka:9092
-      GROUP_ID: 1
+      GROUP_ID: cdc_connect_group
+      REST_PORT: 8083
+      REST_ADVERTISED_HOST_NAME: localhost
       CONFIG_STORAGE_TOPIC: my_cdc_connect_configs
       OFFSET_STORAGE_TOPIC: my_cdc_connect_offsets
       STATUS_STORAGE_TOPIC: my_cdc_connect_statuses
+      CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      STATUS_STORAGE_REPLICATION_FACTOR: "1"
     depends_on: 
       - zookeeper
       - kafka
@@ -83,12 +90,12 @@ services:
   sink_connect:
     image: confluentinc/cp-kafka-connect-base:${CONFLUENT_VERSION}
     ports: 
-      - "9093:8083"
+      - 9093:9093
     environment: 
       CONNECT_BOOTSTRAP_SERVERS: kafka:9092
-      CONNECT_REST_PORT: 8083
+      CONNECT_REST_PORT: 9093
       CONNECT_REST_ADVERTISED_HOST_NAME: "localhost"
-      CONNECT_GROUP_ID: kafka-connect-sink
+      CONNECT_GROUP_ID: sink_connect_group
       CONNECT_CONFIG_STORAGE_TOPIC: my_sink_connect_configs
       CONNECT_OFFSET_STORAGE_TOPIC: my_sink_connect_offsets
       CONNECT_STATUS_STORAGE_TOPIC: my_sink_connect_statuses
@@ -97,6 +104,7 @@ services:
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
       CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      DEBEZIUM_VERSION: ${DEBEZIUM_VERSION}
     depends_on: 
       - zookeeper
       - kafka
@@ -105,6 +113,8 @@ services:
       - kafka:kafka
     networks:
       - howto-debeizum-to-snowflake_kafka-network
+    volumes:
+      - ./credentials:/tmp/credentials
     # https://github.com/confluentinc/demo-scene/blob/master/kafka-connect-zero-to-hero/docker-compose.yml#L89-L101
     command:
       - bash
@@ -113,6 +123,13 @@ services:
         echo "Installing Connector"
         confluent-hub install --no-prompt snowflakeinc/snowflake-kafka-connector:1.5.5
         confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.2.0
+        confluent-hub install --no-prompt debezium/debezium-connector-mysql:latest
+        #
+        echo "Copy snowflake JDBC lib to JDBC connector classpath"
+        cp /usr/share/confluent-hub-components/snowflakeinc-snowflake-kafka-connector/lib/snowflake-jdbc-*.jar /usr/share/confluent-hub-components/confluentinc-kafka-connect-jdbc/lib/
+        #
+        echo "Copy Debezium deps for SMT transform to JDBC connector classpath"
+        cp /usr/share/confluent-hub-components/debezium-debezium-connector-mysql/lib/debezium-*.jar /usr/share/confluent-hub-components/confluentinc-kafka-connect-jdbc/lib/
         #
         echo "Launching Kafka Connect worker"
         /etc/confluent/docker/run &
