@@ -1,0 +1,17 @@
+{
+  "name": "snowpipe-sink-connector",
+  "config": {
+    "connector.class": "com.snowflake.kafka.connector.SnowflakeSinkConnector",
+    "tasks.max": "1",
+    "topics": "mysqldb.inventory.pet,postgresdb.inventory.accounts",
+    "snowflake.topic2table.map": "mysqldb.inventory.pet:cdc_mysql_inventory_pet,postgresdb.inventory.accounts:cdc_postgresdb_inventory_accounts",
+    "snowflake.url.name": "dv15605.west-europe.azure.snowflakecomputing.com:443",
+    "snowflake.user.name": "dariocazas",
+    "snowflake.private.key": "MIIEowIBAAKCAQEArJFv7/40nuy8D4FC76wQQkz1FHnEhS8jvXVTrSGzlJoTRrKm3Nx039+PPgz0EkzW/WiUdyPF6G4ZJh5L9+WU6xEQo9HGFJhA4U4rOOXv9q3SlZEMndpg9qbGd6mp/ym5GZ9lznBVc33oQO2lIWumj8EmuYn7SLpceY7iCUtCrGgu2gE+OxHcajvQPccdMtNlz+LfXXCe+4By7PGQuBkR9wO0wkhoYfRdInvATRSpGJK8jtAmxe9UelobyeEFsbFVqsXruOw1LbNF2bq3IAaQTvD5OVYcfyQ+nDrE55AngRAfewpur09laqYfqzYvVZjutZc2InD4VuSVouGc8bYgqwIDAQABAoIBAAevpqOy19coRiwOntOb/1FkqhnSXp1r/xSGMEbq1FvPDQK+HE6EBzSdeXzTCN/zyjOZP9uanUr/9GDNQqb089AQf4Q8aK0sJt+iIqyzGSAMl++PeVdijaUOwpI73VV/Hz5z6g3q1POC7SBPNWaqq82FVds3uRiBLHNBmPG/B2Y0Xv/GnvdkUUWzuqjjNW+P+dxiLYMLPugjtVJ+i33ttCDc+2CsF3kgnLY77Itwho9VHbK7FKffgsJpFC+MjxsbIkJsVsBcWLa1YV9SsJNHV6KJI19yCyPok9zeWPScNOS4vKnNGihJdxVElGHqdGq9ZZ6WlLfcgzSxoBhQDwaCWtkCgYEA1kJnd2+zU5PCUBWccoCXY+oxGuYET4GGKY87sRM5//tiFCI8VS4mL3vv26PR0l5qGRDrSM1oXFmURXZRixm3MkRYWZo+LvjuM5seQ67K9qKJhnuEVXkRHppzFJxdTDjdsxGDHfe0dh5aOX6E8P0O9ekM9ArAp+8JTKhio0OKfT0CgYEAzi/Ls3++8pqTE+Ej4qtx/oh27deQn4OSJQo7AV4UTMfgwFDPz72qDztR2rgTkV4wRBYTOiYeBeduK94mnlFE0+TXPElht7VrWITxLeXh+ifR1n6M4W0PjKEz1vlFfiZJ+zr60k44rUhKs7PxJgkZEZ6nnHlHrjpau8juafnSxAcCgYEAq1BjDFOKzgu59XCiK8d3xNLvOnOqBKwqyrYU40vdNzkXvcN1/CGvNI5jRXoh/ZOyP6KQjiB3DkgtzrCBGLiSCyYsglBa4hH129tugm2TKUrirV27fOAVeSPDWjqAOr7JPTGGZgK2Dy/LsmbgAxRDzwntan/idSQiimGkpKgPZn0CgYBMvW1LeZhQI0fqdjks/DKJUbEyBLFHLWkPcCdV8vYLPblg2rL91tGcqa9lgG2IBU5hiPXPBrDV8bUHjr9A3W6Ijvus7IL6JQO3BoPdWVoqCPgIpUE6BaVr6fOpZ01+DjIq12DTNVnS5L0o9Sgjx+8Up8AqdNlA92cdzUMvHlRbsQKBgDdrsow0C2EugYLIU7ARx/hUS8EgLeoPQgao34OHOPSTs5bFaok8FnWai3XGNP7iwhvYfulEQ528ELgLd8hqMnnJQSBYwWNiNC15UXy4yEPbDMwjTTOvntK1D5HFfi1tx+qux/ajjXoTIddy4tUvdn+TK1vcjqZ+DbLNKxv9LBTF",
+    "snowflake.database.name": "DEMO_DB",
+    "snowflake.schema.name": "public",
+    "key.converter": "com.snowflake.kafka.connector.records.SnowflakeJsonConverter",
+    "value.converter": "com.snowflake.kafka.connector.records.SnowflakeJsonConverter",
+    "behavior.on.null.values": "IGNORE"
+  }
+}

@@ -1,0 +1,14 @@
+{
+    "name": "snowflake-jdbc-connector",
+    "config": {
+        "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+        "connection.url": "jdbc:snowflake://dv15605.west-europe.azure.snowflakecomputing.com/?user=dariocazas&warehouse=COMPUTE_WH&db=DEMO_DB&schema=public&private_key_file=/tmp/credentials/snowflake_rsa_key.pem",
+        "tasks.max": "1",
+        "topics": "mysqldb.inventory.pet",
+        "auto.create": "true",
+        "transforms": "unwrap",
+        "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+        "transforms.unwrap.drop.tombstones": "false",
+        "transforms.unwrap.delete.handling.mode": "rewrite"
+    }
+}
