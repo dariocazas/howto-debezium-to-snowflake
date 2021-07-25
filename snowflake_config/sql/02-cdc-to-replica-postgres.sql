@@ -9,11 +9,9 @@ use role sysadmin;
 
 -- Create the replica table, including extra columns to support replica logic and process trazability
 create or replace 
-    table "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_PET" 
-    ( id number PRIMARY KEY comment 'primary key of the source table'
-    , sourcedb_binlog_gtid string comment 'database log position, gtid used in HA MySQL (null in other cases), used for ordering events (RECORD_CONTENT:payload.source.gtid)'
-    , sourcedb_binlog_file string comment 'database log position, file log name, used for ordering events (RECORD_CONTENT:payload.source.file)'
-    , sourcedb_binlog_pos string comment 'database log position, position in log file, used for ordering events (RECORD_CONTENT:payload.source.pos)'
+    table "DEMO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_ACCOUNTS" 
+    ( user_id number PRIMARY KEY comment 'primary key of the source table'
+    , sourcedb_lsn string comment 'postgres log sequence number, used for ordering events (RECORD_CONTENT:payload.source.lsn)'
     , payload variant comment 'data after operation (RECORD_CONTENT:payload.after)'
     , cdc_operation char comment 'CDC registered operation in source DB (RECORD_CONTENT:payload.op)'
     , cdc_source_info variant comment 'Debezium source field, for trazability (RECORD_CONTENT:payload.source)'
@@ -23,54 +21,48 @@ create or replace
 comment = 'Replica from CDC over Mysql Inventory Pet';
 
 -- Create final view with same columns as MySQL database to use like the same table
-create or replace view "DEMO_DB"."PUBLIC"."MYSQL_INVENTORY_PET"
+create or replace view "DEMO_DB"."PUBLIC"."POSTGRESDB_INVENTORY_ACCOUNTS"
 as 
-    select payload:id id, payload:name name, payload:owner owner, payload:sex sex, payload:species species
-    from "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_PET";
+    select payload:user_id user_id, payload:username username, payload:password password, payload:email email, payload:created_on created_on
+    from "DEMO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_ACCOUNTS";
 
 -- Create a stream from CDC events table, to process new events into replica table
 create or replace 
-    stream "DEMO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_PET_STREAM_REPLICATION" 
-    on table "DEMO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_PET";
+    stream "DEMO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_ACCOUNTS_STREAM_REPLICATION" 
+    on table "DEMO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_ACCOUNTS";
 
 
 -- After create stream (avoid loss events), process all events available in CDC events table
-merge into "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_PET" replica_table
+merge into "DEMO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_ACCOUNTS" replica_table
     using 
         (with 
-            prequery as (select RECORD_METADATA:key.payload.id id
-                    , COALESCE(RECORD_CONTENT:payload.source.gtid, '') sourcedb_binlog_gtid
-                    , COALESCE(RECORD_CONTENT:payload.source.file, '') sourcedb_binlog_file
-                    , to_number(RECORD_CONTENT:payload.source.pos) sourcedb_binlog_pos
+            prequery as (select RECORD_METADATA:key.payload.user_id user_id
+                    , to_number(RECORD_CONTENT:payload.source.lsn) sourcedb_lsn
                     , RECORD_CONTENT:payload.after payload
                     , RECORD_CONTENT:payload.op cdc_operation
                     , RECORD_CONTENT:payload.source cdc_source_info
                     , RECORD_CONTENT:payload.source.ts_ms ts_ms_sourcedb
                     , RECORD_CONTENT:payload.ts_ms ts_ms_cdc                        
-                from "DEMO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_PET"),
+                from "DEMO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_ACCOUNTS"),
             rank_query as (select *
-                    , ROW_NUMBER() over (PARTITION BY id 
-                        order by ts_ms_cdc desc, sourcedb_binlog_gtid desc, sourcedb_binlog_file desc
-                        , sourcedb_binlog_pos desc) as row_num
+                    , ROW_NUMBER() over (PARTITION BY user_id 
+                        order by ts_ms_cdc desc, sourcedb_lsn desc) as row_num
                 from prequery)
             select * from rank_query where row_num = 1) event_data
-        on replica_table.id = to_number(event_data.id)
+        on replica_table.user_id = to_number(event_data.user_id)
     when not matched and event_data.cdc_operation <> 'd' 
         then insert 
-                (id, sourcedb_binlog_gtid, sourcedb_binlog_file, sourcedb_binlog_pos, payload
-                , cdc_operation, cdc_source_info, ts_ms_sourcedb, ts_ms_cdc, ts_ms_replica_sf)
+                (user_id, sourcedb_lsn, payload, cdc_operation, cdc_source_info, ts_ms_sourcedb
+                , ts_ms_cdc, ts_ms_replica_sf)
             values 
-                (event_data.id, event_data.sourcedb_binlog_gtid, event_data.sourcedb_binlog_file
-                , event_data.sourcedb_binlog_pos, event_data.payload, event_data.cdc_operation
+                (event_data.user_id, event_data.sourcedb_lsn, event_data.payload, event_data.cdc_operation
                 , event_data.cdc_source_info, event_data.ts_ms_sourcedb, event_data.ts_ms_cdc
                 , date_part(epoch_millisecond, CURRENT_TIMESTAMP))
     when matched and event_data.cdc_operation = 'd'
         then delete
     when matched and event_data.cdc_operation <> 'd'
-        then update set id=event_data.id
-            , sourcedb_binlog_gtid=event_data.sourcedb_binlog_gtid
-            , sourcedb_binlog_file=event_data.sourcedb_binlog_file
-            , sourcedb_binlog_pos=event_data.sourcedb_binlog_pos
+        then update set user_id=event_data.user_id
+            , sourcedb_lsn=event_data.sourcedb_lsn
             , payload=event_data.payload
             , cdc_operation=event_data.cdc_operation
             , cdc_source_info=event_data.cdc_source_info
@@ -80,49 +72,43 @@ merge into "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_PET" replica_table
 
 
 -- Create task with previous tested query, but read data from the created stream (not CDC events table).
-create or replace task "DEMO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_PET_TASK_REPLICATION"
+create or replace task "DEMO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_ACCOUNTS_TASK_REPLICATION"
     warehouse = compute_wh
     schedule = '1 minute'
     allow_overlapping_execution = false
     when
-        system$stream_has_data('DEMO_DB.PUBLIC.CDC_MYSQL_INVENTORY_PET_STREAM_REPLICATION')
+        system$stream_has_data('DEMO_DB.PUBLIC.CDC_POSTGRESDB_INVENTORY_ACCOUNTS_STREAM_REPLICATION')
     as
-merge into "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_PET" replica_table
+merge into "DEMO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_ACCOUNTS" replica_table
     using 
         (with 
-            prequery as (select RECORD_METADATA:key.payload.id id
-                    , COALESCE(RECORD_CONTENT:payload.source.gtid, '') sourcedb_binlog_gtid
-                    , COALESCE(RECORD_CONTENT:payload.source.file, '') sourcedb_binlog_file
-                    , to_number(RECORD_CONTENT:payload.source.pos) sourcedb_binlog_pos
+            prequery as (select RECORD_METADATA:key.payload.user_id user_id
+                    , to_number(RECORD_CONTENT:payload.source.lsn) sourcedb_lsn
                     , RECORD_CONTENT:payload.after payload
                     , RECORD_CONTENT:payload.op cdc_operation
                     , RECORD_CONTENT:payload.source cdc_source_info
                     , RECORD_CONTENT:payload.source.ts_ms ts_ms_sourcedb
                     , RECORD_CONTENT:payload.ts_ms ts_ms_cdc                        
-                from "DEMO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_PET_STREAM_REPLICATION"),
+                from "DEMO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_ACCOUNTS_STREAM_REPLICATION"),
             rank_query as (select *
-                    , ROW_NUMBER() over (PARTITION BY id 
-                        order by ts_ms_cdc desc, sourcedb_binlog_gtid desc, sourcedb_binlog_file desc
-                        , sourcedb_binlog_pos desc) as row_num
+                    , ROW_NUMBER() over (PARTITION BY user_id 
+                        order by ts_ms_cdc desc, sourcedb_lsn desc) as row_num
                 from prequery)
             select * from rank_query where row_num = 1) event_data
-        on replica_table.id = to_number(event_data.id)
+        on replica_table.user_id = to_number(event_data.user_id)
     when not matched and event_data.cdc_operation <> 'd' 
         then insert 
-                (id, sourcedb_binlog_gtid, sourcedb_binlog_file, sourcedb_binlog_pos, payload
-                , cdc_operation, cdc_source_info, ts_ms_sourcedb, ts_ms_cdc, ts_ms_replica_sf)
+                (user_id, sourcedb_lsn, payload, cdc_operation, cdc_source_info, ts_ms_sourcedb
+                , ts_ms_cdc, ts_ms_replica_sf)
             values 
-                (event_data.id, event_data.sourcedb_binlog_gtid, event_data.sourcedb_binlog_file
-                , event_data.sourcedb_binlog_pos, event_data.payload, event_data.cdc_operation
+                (event_data.user_id, event_data.sourcedb_lsn, event_data.payload, event_data.cdc_operation
                 , event_data.cdc_source_info, event_data.ts_ms_sourcedb, event_data.ts_ms_cdc
                 , date_part(epoch_millisecond, CURRENT_TIMESTAMP))
     when matched and event_data.cdc_operation = 'd'
         then delete
     when matched and event_data.cdc_operation <> 'd'
-        then update set id=event_data.id
-            , sourcedb_binlog_gtid=event_data.sourcedb_binlog_gtid
-            , sourcedb_binlog_file=event_data.sourcedb_binlog_file
-            , sourcedb_binlog_pos=event_data.sourcedb_binlog_pos
+        then update set user_id=event_data.user_id
+            , sourcedb_lsn=event_data.sourcedb_lsn
             , payload=event_data.payload
             , cdc_operation=event_data.cdc_operation
             , cdc_source_info=event_data.cdc_source_info
@@ -132,7 +118,7 @@ merge into "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_PET" replica_table
 
 
 -- Enable task
-ALTER TASK "DEMO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_PET_TASK_REPLICATION" RESUME;
+ALTER TASK "DEMO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_ACCOUNTS_TASK_REPLICATION" RESUME;
 
 -- Check info about the task executions (STATE and NEXT_SCHEDULED_TIME columns)
 -- If you see error "Cannot execute task , EXECUTE TASK privilege must be granted to owner role" 
@@ -143,9 +129,9 @@ select *
 
 
 -- Check counts (you don't see the same results in event table against the replica table)
-select to_char(RECORD_CONTENT:payload.op) cdc_operation, count(*), 'CDC_MYSQL_INVENTORY_PET' table_name 
-    from "DEMO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_PET" group by RECORD_CONTENT:payload.op
+select to_char(RECORD_CONTENT:payload.op) cdc_operation, count(*), 'CDC_POSTGRESDB_INVENTORY_ACCOUNTS' table_name 
+    from "DEMO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_ACCOUNTS" group by RECORD_CONTENT:payload.op
 union all
-select cdc_operation, count(*), 'REPLICA_MYSQL_INVENTORY_PET' table_name
-    from "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_PET" group by cdc_operation
+select cdc_operation, count(*), 'REPLICA_POSTGRESDB_INVENTORY_ACCOUNTS' table_name
+    from "DEMO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_ACCOUNTS" group by cdc_operation
 order by table_name, cdc_operation;

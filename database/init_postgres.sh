@@ -50,3 +50,9 @@ run_sql "SELECT * from accounts limit 5;"
 echo 
 run_sql "SELECT count(*) AS number_of_accounts from accounts;"
 echo 
+run_sql "UPDATE accounts set password=md5(random()::text) where user_id in (select user_id from accounts order by user_id desc limit 2)"
+echo
+run_sql "DELETE FROM accounts where user_id in (select user_id from accounts order by user_id desc limit 1)"
+echo
+run_sql "SELECT count(*) AS number_of_accounts from accounts"
+echo 
