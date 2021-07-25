@@ -1,6 +1,6 @@
 # Based on https://debezium.io/documentation/reference/1.5/tutorial.html
 # Run as:
-#   docker-compose -f docker-compose-debezium.yml up
+#   docker-compose -f docker-compose.yml up
 ---
 version: "2"
 services:
@@ -18,9 +18,9 @@ services:
   #   docker-compose -f docker-compose-debezium.yml exec kafka /kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
   # After start CDC, you can consume the events using this command
   # MySQL: 
-  #   docker-compose -f docker-compose-debezium.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic mysqldb.inventory.pet
+  #   docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic mysqldb.inventory.pet
   # Postgres:
-  #   docker-compose -f docker-compose-debezium.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic postgresdb.inventory.accounts
+  #   docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic postgresdb.inventory.accounts
   kafka:
     image: debezium/kafka:${DEBEZIUM_VERSION}
     ports:
@@ -35,7 +35,7 @@ services:
     networks:
       - howto-debeizum-to-snowflake_kafka-network
 
-  # docker-compose -f docker-compose-debezium.yml exec mysql bash -c 'mysql -u $MYSQL_USER -p$MYSQL_PASSWORD inventory'
+  # docker-compose -f docker-compose.yml exec mysql bash -c 'mysql -u $MYSQL_USER -p$MYSQL_PASSWORD inventory'
   mysql:
     image: debezium/example-mysql:${DEBEZIUM_VERSION}
     ports: 
@@ -47,7 +47,7 @@ services:
     networks: 
       - howto-debeizum-to-snowflake_db-network
   
-  # docker-compose -f docker-compose-debezium.yml exec postgres env PGOPTIONS="--search_path=inventory" bash -c 'psql -U $POSTGRES_USER postgres'
+  # docker-compose -f docker-compose.yml exec postgres env PGOPTIONS="--search_path=inventory" bash -c 'psql -U $POSTGRES_USER postgres'
   postgres:
     image: debezium/example-postgres:${DEBEZIUM_VERSION}
     ports:

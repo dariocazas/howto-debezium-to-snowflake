@@ -1,6 +1,6 @@
 #!/bin/bash
 DATA_DB_FILE=data_mysql.csv
-DOCKER_COMPOSE_FILE=docker-compose-debezium.yml
+DOCKER_COMPOSE_FILE=docker-compose.yml
 DOCKER_COMPOSE_RELATIVE_PATH=../docker
 
 run_sql() {
