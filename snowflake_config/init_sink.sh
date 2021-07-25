@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONNECT_URL=http://localhost:9093
+CONNECT_URL=http://localhost:8085
 SINK_SNOWPIPE_CONNECT_CONFIG=connect-snowpipe.json
 
 echo "### Creating Snowpipe sink connector ###"

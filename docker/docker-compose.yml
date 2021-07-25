@@ -90,10 +90,10 @@ services:
   sink_connect:
     image: confluentinc/cp-kafka-connect-base:${CONFLUENT_VERSION}
     ports: 
-      - 9093:9093
+      - 8085:8085
     environment: 
       CONNECT_BOOTSTRAP_SERVERS: kafka:9092
-      CONNECT_REST_PORT: 9093
+      CONNECT_REST_PORT: 8085
       CONNECT_REST_ADVERTISED_HOST_NAME: "localhost"
       CONNECT_GROUP_ID: sink_connect_group
       CONNECT_CONFIG_STORAGE_TOPIC: my_sink_connect_configs
