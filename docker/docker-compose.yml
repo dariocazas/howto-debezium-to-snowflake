@@ -122,14 +122,6 @@ services:
       - |
         echo "Installing Connector"
         confluent-hub install --no-prompt snowflakeinc/snowflake-kafka-connector:1.5.5
-        confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.2.0
-        confluent-hub install --no-prompt debezium/debezium-connector-mysql:latest
-        #
-        echo "Copy snowflake JDBC lib to JDBC connector classpath"
-        cp /usr/share/confluent-hub-components/snowflakeinc-snowflake-kafka-connector/lib/snowflake-jdbc-*.jar /usr/share/confluent-hub-components/confluentinc-kafka-connect-jdbc/lib/
-        #
-        echo "Copy Debezium deps for SMT transform to JDBC connector classpath"
-        cp /usr/share/confluent-hub-components/debezium-debezium-connector-mysql/lib/debezium-*.jar /usr/share/confluent-hub-components/confluentinc-kafka-connect-jdbc/lib/
         #
         echo "Launching Kafka Connect worker"
         /etc/confluent/docker/run &
