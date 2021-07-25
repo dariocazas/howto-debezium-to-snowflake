@@ -1,5 +1,6 @@
--- Set public key in snowflake to your user account to enable access via kafka connect
 
+
+-- Set public key in snowflake to your user account to enable access via kafka connect
 -- Snowflake doc refers to SECURITYADMIN, but for me didn't work (I need use ACCOUNTADMIN)
 -- https://docs.snowflake.com/en/user-guide/kafka-connector-install.html#using-key-pair-authentication-key-rotation
 use role accountadmin;
@@ -12,3 +13,7 @@ j8EmuYn7SLpceY7iCUtCrGgu2gE+OxHcajvQPccdMtNlz+LfXXCe+4By7PGQuBkR
 TvD5OVYcfyQ+nDrE55AngRAfewpur09laqYfqzYvVZjutZc2InD4VuSVouGc8bYg
 qwIDAQAB';
 
+
+-- To simplify the howto, adding privilege EXECUTE TASK to role sysadmin
+-- https://docs.snowflake.com/en/user-guide/tasks-ts.html#step-3-verify-the-permissions-granted-to-the-task-owner
+grant EXECUTE TASK on account to role sysadmin;
