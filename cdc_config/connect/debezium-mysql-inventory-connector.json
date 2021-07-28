@@ -1,5 +1,5 @@
 {
-    "name": "mysql-inventory-connector",
+    "name": "debezium-mysql-inventory-connector",
     "config": {
         "connector.class": "io.debezium.connector.mysql.MySqlConnector",
         "tasks.max": "1",
@@ -12,6 +12,6 @@
         "database.include": "inventory",
         "database.history.kafka.bootstrap.servers": "kafka:9092",
         "database.history.kafka.topic": "mysqldb.schema-changes.inventory",
-        "table.include.list": "inventory.pet"
+        "table.include.list": "inventory.users"
     }
 }
