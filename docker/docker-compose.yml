@@ -16,9 +16,9 @@ services:
   #   docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
   # After start CDC, you can consume the events using this command
   # MySQL: 
-  #   docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic mysqldb.inventory.pet
+  #   docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic mysqldb.inventory.users
   # Postgres:
-  #   docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic postgresdb.inventory.accounts
+  #   docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic postgresdb.inventory.product
   kafka:
     image: debezium/kafka:${DEBEZIUM_VERSION}
     ports:
