@@ -1,0 +1,7 @@
+CREATE TABLE users (
+    id MEDIUMINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(20), 
+    email VARCHAR(255),
+    password VARCHAR(100),
+    created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

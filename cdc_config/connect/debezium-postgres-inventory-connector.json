@@ -1,5 +1,5 @@
 {
-    "name": "postgres-inventory-connector",
+    "name": "debezium-postgres-inventory-connector",
     "config": {
         "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
         "tasks.max": "1",
@@ -10,6 +10,6 @@
         "database.dbname": "postgres",
         "database.server.name": "postgresdb",
         "schema.include": "inventory",
-        "table.include.list": "inventory.accounts"
+        "table.include.list": "inventory.product"
     }
 }

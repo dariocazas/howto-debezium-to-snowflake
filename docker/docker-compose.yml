@@ -11,11 +11,9 @@ services:
       - 2181:2181
       - 2888:2888
       - 3888:3888
-    networks:
-      - howto-debeizum-to-snowflake_kafka-network
 
   # You can list the existing topics with
-  #   docker-compose -f docker-compose-debezium.yml exec kafka /kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
+  #   docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
   # After start CDC, you can consume the events using this command
   # MySQL: 
   #   docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic mysqldb.inventory.pet
@@ -32,8 +30,6 @@ services:
       - zookeeper
     links:
       - zookeeper:zookeeper
-    networks:
-      - howto-debeizum-to-snowflake_kafka-network
 
   # docker-compose -f docker-compose.yml exec mysql bash -c 'mysql -u $MYSQL_USER -p$MYSQL_PASSWORD inventory'
   mysql:
@@ -44,8 +40,6 @@ services:
       MYSQL_ROOT_PASSWORD: debezium
       MYSQL_USER: mysqluser
       MYSQL_PASSWORD: mysqlpw
-    networks: 
-      - howto-debeizum-to-snowflake_db-network
   
   # docker-compose -f docker-compose.yml exec postgres env PGOPTIONS="--search_path=inventory" bash -c 'psql -U $POSTGRES_USER postgres'
   postgres:
@@ -55,8 +49,6 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres  
-    networks: 
-      - howto-debeizum-to-snowflake_db-network
   
   cdc_connect:
     image: debezium/connect:${DEBEZIUM_VERSION}
@@ -83,9 +75,6 @@ services:
       - kafka:kafka
       - mysql:mysql
       - postgres:postgres
-    networks:
-      - howto-debeizum-to-snowflake_kafka-network
-      - howto-debeizum-to-snowflake_db-network
 
   sink_connect:
     image: confluentinc/cp-kafka-connect-base:${CONFLUENT_VERSION}
@@ -111,8 +100,6 @@ services:
     links:
       - zookeeper:zookeeper
       - kafka:kafka
-    networks:
-      - howto-debeizum-to-snowflake_kafka-network
     volumes:
       - ./credentials:/tmp/credentials
     # https://github.com/confluentinc/demo-scene/blob/master/kafka-connect-zero-to-hero/docker-compose.yml#L89-L101
@@ -127,7 +114,3 @@ services:
         /etc/confluent/docker/run &
         #
         sleep infinity
-
-networks: 
-  howto-debeizum-to-snowflake_kafka-network: 
-  howto-debeizum-to-snowflake_db-network:
