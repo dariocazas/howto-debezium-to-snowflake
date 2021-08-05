@@ -1,6 +1,6 @@
 # Howto - CDC with Debezium
 
-![Debezium-logo](../.images/debeziumio-ar21.svg)
+![Debezum-logo](../.images/color_white_debezium_type_600px.svg)
 
 As part of this howto, I provide:
 

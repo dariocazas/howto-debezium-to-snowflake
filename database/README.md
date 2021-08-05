@@ -1,8 +1,8 @@
 # Howto - Database description
 
-![MySQL-logo](../.images/logo-mysql-170x115.png)
 
-![PostgreSQL-logo](../.images/File_PostgreSQL_logo.3colors.svg)
+![PostgreSQL-logo](../.images/PostgreSQL_logo.3colors.120x120.png)
+![MySQL-logo](../.images/logo-mysql-170x115.png)
 
 As part of this howto, I provide:
 
