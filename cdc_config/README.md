@@ -440,7 +440,10 @@ In this case, when you start the connector you only see one topic:
 
 If you review the properties used, is very similar to the MySQL connector, and no new description is needed.
 
+#### Secret management
 
+Is a good practice externalize your secrets outside of connector configs. You can review the [KIP-297] to use
+an external provider to reference it.
 
 
 [database readme]: ../database/README.md
@@ -448,3 +451,4 @@ If you review the properties used, is very similar to the MySQL connector, and n
 [Debezium connector for MySQL]: https://debezium.io/documentation/reference/connectors/mysql.html
 [Debezium connector for PostgreSQL]: https://debezium.io/documentation/reference/connectors/postgresql.html
 [the official doc about kafka connect configuring]: https://kafka.apache.org/documentation.html#connect_configuring
+[KIP-297]: https://cwiki.apache.org/confluence/display/KAFKA/KIP-297%3A+Externalizing+Secrets+for+Connect+Configurations
