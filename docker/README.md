@@ -1,33 +1,28 @@
 # Howto - Docker compose description
 
+![docker-logo](../.images/horizontal-logo-monochromatic-white.png)
+
 As part of this howto, I provide:
 
 - A docker-compose to run it
 - `credentials` folder with Snowflake keys
 - `.env` file with product versions
 
-## Docker-compose detail
+## Quick steps
 
-The compose YML run several images and expose several ports. For simplicity, I use debezium images for many parts:
+### Preconditions
 
-- **mysql**: database instance provided by debezium team
-- **postgres**: database instance provide by debezium team
-- **zookeeper**: as part of Kafka ecosystem
-- **kafka**: single kafka broker, exposing his 9092 port
-- **cdc_connect**: kafka connect worker node, provided by debezium team, with the connector plugins for his supported databases
-- **sink_connect**: kafka connect worker node, provided by confluent. I include the installation of snowflake connector plugin
+If you want to complete this howto with Snowflake part, I recommend as the first step configure the Snowflake 
+environment and the credentials. Review [credentials](./credentials) folder and follow his README
 
-![Docker compose info](docker-compose.png)
+On another side, I assume that you have basic knowledge about Docker and docker-compose.
 
-## Credentials folder
+No other preconditions are needed.
 
-The `credentials` folder store the public and private key used in `sink_connect` to upload data to Snowflake. 
-Review the [README](./credentials/README.md) inside of this folder to configure your own Snowflake account.
+### Run it
 
-
-## Usage
-
-You can run it with a single command, and see all logs in your terminal. Clone this repository and go to docker folder to run it
+You can run it with a single command, and see all logs in your terminal. Clone this repository and go to the 
+docker folder to run it:
 ```sh
 git clone https://github.com/dariocazas/howto-debezium-to-snowflake.git
 cd docker
@@ -36,14 +31,36 @@ docker-compose up
 
 You can stop this using `Ctrl+C`
 
+**It is important** go to the docker folder due to use a `.env` file available in this folder
+
 Return to global [README](../README.md) to check next steps.
 
-## Access to containers
+## Context 
+
+### Docker-compose detail
+
+The compose YML run several images and expose several ports. For simplicity, I use Debezium images for many parts:
+
+- **mysql**: database instance provided by Debezium team
+- **postgres**: database instance provide by Debezium team
+- **zookeeper**: as part of the Kafka ecosystem
+- **kafka**: single Kafka broker, exposing his 9092 port
+- **cdc_connect**: Kafka connect worker node, provided by Debezium team, with the connector plugins for his supported databases
+- **sink_connect**: Kafka connect worker node, provided by confluent. I include the installation of snowflake connector plugin
+
+![Docker compose info](docker-compose.png)
+
+### Credentials folder
+
+The `credentials` folder store the public and private keys used in `sink_connect` to upload data to Snowflake. 
+Review the [README](./credentials/README.md) inside of this folder to configure your Snowflake account.
+
+### Access to containers
 
 Inside of docker-compose file, you can see several commands to enable access to the containers.
-You can run this commands inside `docker` folder (to enable docker to read the `.env` file)
+You can run these commands inside the `docker` folder (to enable docker to read the `.env` file)
 
-### Kafka commands
+#### Kafka commands
 
 ```sh
 # List topics
@@ -66,7 +83,7 @@ docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-console-consume
     --topic mysqldb.inventory.product
 ```
 
-### Database commands
+#### Database commands
 
 ```sh
 # Access to MySQL shell
@@ -79,7 +96,7 @@ docker-compose -f docker-compose.yml exec mysql \
     bash -c 'psql -U $POSTGRES_USER postgres'
 ```
 
-# References
+## References
 
 - [Debezium tutorial](https://debezium.io/documentation/reference/1.6/tutorial.html)
 - [Debezium images github](https://github.com/debezium/docker-images)
