@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONNECT_URL=http://localhost:9093
+CONNECT_URL=http://localhost:8085
 
 CONNECTORS=$(curl -s -k ${CONNECT_URL}/connectors)
 echo Connector list:

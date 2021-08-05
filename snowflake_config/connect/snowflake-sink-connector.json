@@ -1,5 +1,5 @@
 {
-  "name": "snowpipe-sink-connector",
+  "name": "snowflake-sink-connector",
   "config": {
     "connector.class": "com.snowflake.kafka.connector.SnowflakeSinkConnector",
     "tasks.max": "1",

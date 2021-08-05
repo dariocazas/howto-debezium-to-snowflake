@@ -50,7 +50,7 @@ merge into "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_USERS" replica_table
                 from "DEMO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS"),
             rank_query as (select *
                     , ROW_NUMBER() over (PARTITION BY id 
-                        order by ts_ms_cdc desc, sourcedb_binlog_gtid desc, sourcedb_binlog_file desc
+                        order by ts_ms_cdc desc, sourcedb_binlog_file desc
                         , sourcedb_binlog_pos desc) as row_num
                 from prequery)
             select * from rank_query where row_num = 1) event_data
