@@ -1,13 +1,17 @@
 # Howto - Database description
 
+
+![PostgreSQL-logo](../.images/PostgreSQL_logo.3colors.120x120.png)
+![MySQL-logo](../.images/logo-mysql-170x115.png)
+
 As part of this howto, I provide:
 
 - SQL scripts to create new tables and data
 - Bash scripts to apply the SQL over the dockerized databases
 
-## Prerequisites
+## Tables
 
-Well, to simplify the howto, we use database images provided by debezium.
+Well, to simplify the howto, we use database images provided by Debezium.
 Review [docker readme] about the databases available, and run the docker-compose
 to start the instances.
 
@@ -17,10 +21,10 @@ When the instances are UP, you should perform this script:
 ./init_db.sh
 ```
 
-This script initialize tables in both database instances (MySQL and PostgreSQL)
+This script initializes tables in both database instances (MySQL and PostgreSQL)
 loaded from `./sql` folder.
 
-For accessing to MySQL shell or PostgreSQL shell, review the [docker readme]. 
+For accessing MySQL shell or PostgreSQL shell, review the [docker readme]. 
 
 The SQL script [`sql/00_mysql_init.sql`](./sql/00_mysql_init.sql) create the
 **users table** with five basic fields, common for a lot of databases.
@@ -28,13 +32,13 @@ The SQL script [`sql/00_mysql_init.sql`](./sql/00_mysql_init.sql) create the
 The SQL script [`sql/00_postgres_init.sql`](./sql/00_postgres_init.sql) create the
 **product table** with five basic fields, common for a lot of databases.
 
-The `init_db.sh` script use these SQL files to init database tables (one for each database)
+The `init_db.sh` script uses these SQL files to init database tables (one for each database)
 in preconfigured database `inventory`.
 
 Both tables have a `created_on` field with the timestamp of creation. This field
 is not necessary for CDC, but can be util to perform some checks in sink destination.
 
-## CRUD operations for howto
+## CRUD operations
 
 Well, as part of the demo, you should do actions over the databases. For each reason,
 I provide two scripts:

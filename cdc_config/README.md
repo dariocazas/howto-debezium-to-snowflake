@@ -1,48 +1,73 @@
-# Howto - CDC part
+# Howto - CDC with Debezium
+
+![Debezum-logo](../.images/color_white_debezium_type_600px.svg)
 
 As part of this howto, I provide:
 
-- Kafka connect configurations to capture changes from MySQL and PosgreSQL databases
-- Scripts to create, destroy and check status of this connectors
+- Kafka connect configurations to capture changes from MySQL and PostgreSQL databases
+- Scripts to create, destroy and check the status of these connectors
 
-Kafka connect enable the ability to push/poll events to Kafka from/to 
-other system using only a configuration file, without develop a source/sink application.
+## Quick steps
 
-The Kafka connector plugin need to be deployed into the Kafka connect nodes (called
-worker nodes), and after do this you can call a REST API with a configuration to
-enable the connector to push data from external source to Kafka (like CDC connector do for you) 
-or pull data from Kafka to other sink destination.
-
-## Preconditions
+### Preconditions
 
 Review [docker readme] about the databases available, and run the docker-compose
-to start services to run CDC.
+to start services over you run Debezium.
 
-It isn't necessary run the described process in [database readme]: when the 
+It isn't necessary to run the described process in [database readme]: when the 
 cdc_connect service and database services are UP, you can init the CDC.
 Obviously, topics will not be created or changes will be captured until 
 the different steps described in [database readme].
 
-## Change Events
+### Scripts
 
-In Kafka, a topic can have one or more partitions. This enable parallel read from consumers in the same 
-consumer group. A consumer group is a group of consumers that see the topic as a queue, and each consumer
-can pull events from several partitions but one partition cannot have more than one consumer for each consumer group.
-This is a main point to understand one part of the event: the key.
+This folder includes three scripts, that perform actions against the docker service `cdc_connector`:
+
+- `init_cdc.sh`: take the configurations available in `./connect` folder, and call 
+    the Kafka connect REST API to create the connector that captures the changes 
+    in the databases and push it in Kafka
+- `status_cdc.sh`: call the Kafka connect REST API, get the list of configured 
+    connectors, and for each connector call to show you the status
+- `delete_cdc.sh`: similar to status, but delete all the connectors in this 
+    Kafka connect service
+
+With these scripts, you can perform your test as you wish:
+
+- Create connectors after or before the tables exists or have data
+- Destroy connectors, insert new data, and create again to check data loss
+- Wherever test that you can do
+
+## Context
+
+Kafka connect enables the ability to push/poll events to Kafka from/to 
+other system using only a configuration file, without developing a source/sink application.
+
+The Kafka connector plugin need to be deployed into the Kafka connect nodes (called
+worker nodes), and after doing this you can call a REST API with a configuration to
+enable the connector to push data from an external source to Kafka (like CDC connector do for you) 
+or pull data from Kafka to other sink destinations.
+
+### Change Events
+
+In Kafka, a topic can have one or more partitions. This enables parallel read from consumers 
+in the same consumer group.  A consumer group is a group of consumers that see the topic as 
+a queue and each consumer can pull events from several partitions but one partition cannot 
+have more than one consumer for each consumer group. This is the main point to understand 
+one part of the event: the key.
 
 An event has three parts:
 - Key: 
     - By default, all events with the same key are pushed to the same partition. 
-    - This can be null, in this case a round robin between partitions on push is performed.
+    - This can be null, in this case by default, a round-robin between partitions on push is performed.
 - Value: the event data
 - Headers: a collection of pair key-value that can be setted
 
-Compared to the native CDC of each database, Debezium provides a decoupling between the
+Compared to the native CDC of each database, Debezium provides decoupling between the
 database engine and the events it emits, standardizing them and making them common as far as possible.
 
 As a key, Debezium (and other change data capture tools) include the key fields of the table 
 
-As value, Debezium sends this common fields:
+As a value, Debezium sends these common fields:
 - source: a metadata document about the connector and the source database
 - op: the operation code, can be `r` (read, snapshot), `c`(create, insert), `u` (update), `d` (delete)
 - after: a document with the data state after database operation
@@ -311,77 +336,60 @@ As value, Debezium sends this common fields:
 
 </details>
 
-To mantain simple this demo, it works with JSON events with your own schema included in the event. 
-In a non-test environment, we recoment use a Schema Registry to store the schemas, and other serialization
-format like Avro to store it. 
+To maintain simplicity, this demo works with JSON events with the schema included in the event. 
+In a non-test environment, the recommended approach is to use a Schema Registry to store the schemas
+and other serialization format like Avro to store it. 
 
-## Connector actions
+### Connector actions
 
-When connectors perform a first run, you can see an initial snapshot of the database (is a configurable option).
-After do this, every change applied to the tables that these connectors listen, will be track to Kafka. This include:
+When connectors perform the first run, you can see an initial snapshot of the database (which is a configurable option).
+After doing this, every change applied to the tables that these connectors listen will be the track to Kafka. This include:
 - When you add new rows, one event per row will be inserted
 - When you update rows,
     - One event per row will be updated
-    - If update affects the key of the table, Debezium throw like a delete action and new insert of data
+    - If an update affects the key of the table, Debezium throw like a delete action and a new insert of data
 - When you delete rows, two events per row will be deleted (configurable option):
     - One event with info about the operation DELETE
-    - Other event with null value (events in Kafka have key, value and headers, and any can be null)
+    - Another event with a null value (events in Kafka have key, value, and headers, and any can be null)
 
-Each event has as key the key of the table, that enable guarantees of order. The topics of Kafka
+Each event has as key the key of the table, that enables guarantees of order. The topics of Kafka
 have properties to identify data retention and clean policies:
 - Retention by time
 - Retention by size
 - Retention by compaction
 
-When using compaction hold, when Kafka triggers the cleanup process, it keeps the last event for 
-each key on the topic. If last event for a key has a null as value, Kafka remove all events for 
-this key. With this approach, when a new consumer begins to read the topic, he does not have 
-to download the changes from the origin of the replica: he first obtains the state of the table 
-from the moment of the last compaction, and then continues reading the changes captured since then.
+When using compaction hold, when Kafka triggers the cleanup process, it keeps the last event for each key on the topic. 
+If the last event for a key has a null value, Kafka removes all events for this key. With this approach, 
+when a new consumer begins to read the topic, he does not have to download the changes from the origin of the replica: 
+he first obtains the state of the table from the moment of the last compaction, and then continues reading 
+the changes captured since then.
 
-## Scripts
 
-This folder include three scripts, that perform actions agains the docker service `cdc_connector`:
+### Connectors config
 
-- `init_cdc.sh`: take the configurations available in `./connect` folder, and call 
-    the Kafka connect REST API to create the connector that capture the changes 
-    in the databases
-- `status_cdc.sh`: call the Kafka connect REST API, get the list of configured 
-    connectors, and foreach connector call to show you the status
-- `delete_cdc.sh`: similar to status, but delete all the connectors in this 
-    Kafka connect service
-
-With these scripts, you can perform your test as you wish:
-
-- Create connectors after or before the tables exists or have data
-- Destroy connectors, insert new data, and create again to check data loss
-- Wherever test that you can do
-
-## Connectors config
-
-The Kafka connectors have a common configuration properties and other that it depends of 
+The Kafka connectors have common configuration properties and others that depend of 
 the Kafka connector plugin that you use. A FileStreamSource connector needs 
 the configuration of the file to read, and a CDC connector need info about the 
-database that should be read: evidently the configuration is not the same, but 
+database that should be read: the configuration is not the same, but 
 some parts are common:
 - name: all connectors should have a name to reference it
-- connector.class: the class that implements the connector, that maybe a 
-    source (push external data to Kafka) or sink (pull data from Kafka to other system)
-- tasks.max: the maximun number of task that perform the source/sink action
+- connector.class: the class that implements the connector, that may be a 
+    source (push external data to Kafka) or sink (pull data from Kafka to another system)
+- tasks.max: the maximum number of tasks that perform the source/sink action
 
 To review other common configurations, you can review [the official doc about kafka connect configuring].
 
-Other main point of the Kafka connector is the ability to do some basic transformations (called SMT)
+Another main point of the Kafka connector is the ability to do some basic transformations (called SMT)
 of the event, like add some field or change the event key. We don't perform this 
 in this howto, but can be interested in some use cases.
 
-### MySQL connector
+#### MySQL connector
 
 You can see all the documentation about this Kafka connector plugin in 
 the [Debezium connector for MySQL] page.
 
-This connector support several MySQL topologies, but in this demo will track
-changes for a standalone MysQL server.
+This connector supports several MySQL topologies, but this demo will track
+changes for a standalone MySQL server.
 
 When you start the connector, you can see three new topics:
 
@@ -392,13 +400,13 @@ When you start the connector, you can see three new topics:
     is necessary by internal management of the CDC connector. You can configure the 
     topic name in `database.history.kafka.topic`
 - `mysqldb.inventory.users`: 
-    - If you was run the steps in [database readme], you should have a topic for this table
+    - If you were run the steps in [database readme], you should have a topic for this table
     - This topic manage the change events for table users
     
 Well, you can see the connector config in [`connect/debezium-mysql-inventory-connector.json`](./connector/debezium-mysql-inventory-connector.json)
 
 - Connection properties:
-    - `database.hostname`: IP address or host name of the MySQL database server.
+    - `database.hostname`: IP address or hostname of the MySQL database server.
     - `database.port`: integer port number of the MySQL database server.
     - `database.user`: name of the MySQL user to use when connecting to the MySQL database server.
     - `database.password`: password to use when connecting to the MySQL database server.
@@ -420,19 +428,22 @@ Well, you can see the connector config in [`connect/debezium-mysql-inventory-con
     - Exists properties to configure the exclude instead of include databases/tables, and a lot of
         parametrized options. Review the [official doc](https://debezium.io/documentation/reference/connectors/mysql.html#mysql-connector-properties).
 
-### PostgreSQL connector
+#### PostgreSQL connector
 
 You can see all the documentation about this Kafka connector plugin in 
 the [Debezium connector for PostgreSQL] page.
 
 In this case, when you start the connector you only see one topic:
 - `postgres.inventory.product`: 
-    - If you was run the steps in [database readme], you should have a topic for this table
+    - If you were run the steps in [database readme], you should have a topic for this table
     - This topic manage the change events for table product
 
 If you review the properties used, is very similar to the MySQL connector, and no new description is needed.
 
+#### Secret management
 
+Is a good practice externalize your secrets outside of connector configs. You can review the [KIP-297] to use
+an external provider to reference it.
 
 
 [database readme]: ../database/README.md
@@ -440,3 +451,4 @@ If you review the properties used, is very similar to the MySQL connector, and n
 [Debezium connector for MySQL]: https://debezium.io/documentation/reference/connectors/mysql.html
 [Debezium connector for PostgreSQL]: https://debezium.io/documentation/reference/connectors/postgresql.html
 [the official doc about kafka connect configuring]: https://kafka.apache.org/documentation.html#connect_configuring
+[KIP-297]: https://cwiki.apache.org/confluence/display/KAFKA/KIP-297%3A+Externalizing+Secrets+for+Connect+Configurations
