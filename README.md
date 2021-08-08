@@ -9,7 +9,7 @@
     + [Create Snowflake Account](#create-snowflake-account)
     + [Start Sink Process Snowflake](#start-sink-process-snowflake)
     + [Configure Table Replication Snowflake](#configure-table-replication-snowflake)
-  * [I need more!!](#i-need-more--)
+  * [I need more!!](#i-need-more)
 
 This repo is a demo of how to use Debezium to capture changes over tables in MySQL and PostgreSQL 
 to generate a replica in near-real-time in Snowflake. This is extensible to other databases and
