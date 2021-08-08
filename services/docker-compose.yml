@@ -1,6 +1,6 @@
 # Based on https://debezium.io/documentation/reference/1.5/tutorial.html
 # Run as:
-#   docker-compose -f docker-compose.yml up
+#   docker-compose up
 ---
 version: "2"
 services:
@@ -13,12 +13,12 @@ services:
       - 3888:3888
 
   # You can list the existing topics with
-  #   docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
+  #   docker-compose exec kafka /kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
   # After start CDC, you can consume the events using this command
   # MySQL: 
-  #   docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic mysqldb.inventory.users
+  #   docker-compose exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic mysqldb.inventory.users
   # Postgres:
-  #   docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic postgresdb.inventory.product
+  #   docker-compose exec kafka /kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic postgresdb.inventory.product
   kafka:
     image: debezium/kafka:${DEBEZIUM_VERSION}
     ports:
@@ -31,7 +31,7 @@ services:
     links:
       - zookeeper:zookeeper
 
-  # docker-compose -f docker-compose.yml exec mysql bash -c 'mysql -u $MYSQL_USER -p$MYSQL_PASSWORD inventory'
+  # docker-compose exec mysql bash -c 'mysql -u $MYSQL_USER -p$MYSQL_PASSWORD inventory'
   mysql:
     image: debezium/example-mysql:${DEBEZIUM_VERSION}
     ports: 
@@ -41,7 +41,7 @@ services:
       MYSQL_USER: mysqluser
       MYSQL_PASSWORD: mysqlpw
   
-  # docker-compose -f docker-compose.yml exec postgres env PGOPTIONS="--search_path=inventory" bash -c 'psql -U $POSTGRES_USER postgres'
+  # docker-compose exec postgres env PGOPTIONS="--search_path=inventory" bash -c 'psql -U $POSTGRES_USER postgres'
   postgres:
     image: debezium/example-postgres:${DEBEZIUM_VERSION}
     ports:
@@ -100,8 +100,6 @@ services:
     links:
       - zookeeper:zookeeper
       - kafka:kafka
-    volumes:
-      - ./credentials:/tmp/credentials
     # https://github.com/confluentinc/demo-scene/blob/master/kafka-connect-zero-to-hero/docker-compose.yml#L89-L101
     command:
       - bash

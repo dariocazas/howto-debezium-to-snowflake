@@ -1,4 +1,4 @@
-# Howto - Docker compose description
+# Services
 
 ![docker-logo](../.images/horizontal-logo-monochromatic-white.png)
 
@@ -8,32 +8,19 @@ As part of this howto, I provide:
 - `credentials` folder with Snowflake keys
 - `.env` file with product versions
 
-## Quick steps
-
-### Preconditions
-
-If you want to complete this howto with Snowflake part, I recommend as the first step configure the Snowflake 
-environment and the credentials. Review [credentials](./credentials) folder and follow his README
-
-On another side, I assume that you have basic knowledge about Docker and docker-compose.
-
-No other preconditions are needed.
-
-### Run it
+## Usage
 
 You can run it with a single command, and see all logs in your terminal. Clone this repository and go to the 
 docker folder to run it:
 ```sh
 git clone https://github.com/dariocazas/howto-debezium-to-snowflake.git
-cd docker
+cd howto-debezium-to-snowflake/services
 docker-compose up
 ```
 
 You can stop this using `Ctrl+C`
 
 **It is important** go to the docker folder due to use a `.env` file available in this folder
-
-Return to global [README](../README.md) to check next steps.
 
 ## Context 
 
@@ -49,11 +36,6 @@ The compose YML run several images and expose several ports. For simplicity, I u
 - **sink_connect**: Kafka connect worker node, provided by confluent. I include the installation of snowflake connector plugin
 
 ![Docker compose info](docker-compose.png)
-
-### Credentials folder
-
-The `credentials` folder store the public and private keys used in `sink_connect` to upload data to Snowflake. 
-Review the [README](./credentials/README.md) inside of this folder to configure your Snowflake account.
 
 ### Access to containers
 
