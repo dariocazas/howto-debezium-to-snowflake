@@ -1,6 +1,6 @@
 #!/bin/bash
 DOCKER_COMPOSE_FILE=docker-compose.yml
-DOCKER_COMPOSE_RELATIVE_PATH=../docker
+DOCKER_COMPOSE_RELATIVE_PATH=../services
 
 MYSQL=`cat sql/00_mysql_init.sql`
 POSTGRES=`cat sql/00_postgres_init.sql`
