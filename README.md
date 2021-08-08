@@ -135,7 +135,7 @@ When you run the CRUD scripts of `database` folder, new events should be in the 
 Maybe you already have a space in Snowflake, with a set of keys, and the necessary privileges. 
 If so, you can move on to the next point. For those who don't, these are the steps to take at this point.
 
-In Snowflake, you can create a free trial in https://signup.snowflake.com/trial
+In Snowflake, you can create a free trial in https://signup.snowflake.com
 
 For this howto, you can select a Standard Snowflake edition over any cloud. 
 After validating email and access to the web console, you can see:
