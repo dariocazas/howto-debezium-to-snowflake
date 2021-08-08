@@ -1,6 +1,6 @@
 #!/bin/bash
 DOCKER_COMPOSE_FILE=docker-compose.yml
-DOCKER_COMPOSE_RELATIVE_PATH=../docker
+DOCKER_COMPOSE_RELATIVE_PATH=../services
 
 run_sql() {
     echo "$1"
