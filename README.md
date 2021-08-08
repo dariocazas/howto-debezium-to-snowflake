@@ -151,7 +151,7 @@ This repo contains a key pair in `snowflake/keys` folder. You can use it or revi
 to generate your keys. The private key is used in the configuration of the sink connector, and 
 the public key is set to your Snowflake user vía SQL command.
 
-Goto [`snowflake/sql/00-security.sql`] and take this code to your Worksheet. 
+Go to [snowflake/sql/00-security.sql] and take this code to your Worksheet. 
 If you generate your key pair, replace the `rsa_public_key` for your own `.pub` key. 
 To simplify the exercise, `execute task` privileges will also be granted to the `SYSADMIN` role, 
 which will be the role with which you execute all our sentences. Run all queries to apply.
@@ -206,12 +206,13 @@ I hope this tutorial has been helpful for you and you have enjoyed it.
 [Data Platform: Building an Enterprise CDC Solution]: https://dzone.com/articles/data-platform-building-an-enterprise-cdc-solution
 [docker-compose]: https://docs.docker.com/compose/install/
 [docker engine]: https://docs.docker.com/engine/
-[services]:_services/README.md
+[OpenSSL toolkit]: https://github.com/openssl/openssl#build-and-install
+[services]: services/README.md
 [database]: database/README.md
 [debezium]: debezium/README.md
 [snowflake]: snowflake/README.md
 [snowflake/keys README]: snowflake/keys
-[`snowflake/sql/00-security.sql`]: snowflake/sql/00-security.sql
+[snowflake/sql/00-security.sql]: snowflake/sql/00-security.sql
 [snowflake/connect/snowflake-sink-connector.json]: snowflake/connect/snowflake-sink-connector.json
 [snowflake/sql/01-cdc-to-replica-mysql.sql]: snowflake/sql/01-cdc-to-replica-mysql.sql
 [snowflake/sql/01-cdc-to-replica-postgres.sql]: snowflake/sql/01-cdc-to-replica-postgres.sql
