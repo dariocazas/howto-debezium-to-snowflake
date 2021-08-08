@@ -1,6 +1,16 @@
-# Howto - the Snowflake part 
+# Snowflake
 
 ![Snowflake-logo](../.images/Snowflake_Logo.svg.png)
+
+  * [Sink to Snowflake scripts](#sink-to-snowflake-scripts)
+    + [Snowflake scripts](#snowflake-scripts)
+  * [Context](#context)
+    + [Sink connector](#sink-connector)
+    + [Snowflake security](#snowflake-security)
+    + [Snowflake resource naming used](#snowflake-resource-naming-used)
+    + [Snowflake CDC Debeizum table](#snowflake-cdc-debeizum-table)
+    + [Snowflake replica table](#snowflake-replica-table)
+    + [The final view](#the-final-view)
 
 As part of this howto, I provide:
 
@@ -8,20 +18,7 @@ As part of this howto, I provide:
 - Scripts to create, destroy and check the status of these connectors
 - Snowflake SQL scripts with replica transformation of the change event tables
 
-## Quick steps
-
-### Preconditions
-
-You need a Snowflake account to run it. You should review the guide in [docker/credentials],
-including the keys to auth the connectors.
-
-This is the last part of the demo. You should complete all other parts of the demo. 
-Review the [global README](../README.md) to check it.
-
-Remember check if your topics exist and have data, for example consuming the events using the command referenced in 
-[docker](../docker/README.md) guide.
-
-### Sink to Snowflake scripts
+## Sink to Snowflake scripts
 
 This folder includes three bash scripts, that perform actions against the docker service `cdc_sink`:
 
@@ -51,7 +48,7 @@ With these scripts, you can perform your test as you wish:
 
 Configure your Snowflake account replication with:
 
-- `sql/00-security.sql`: you partially include it when you do the [docker/credentials] guide. The script is documented.
+- `sql/00-security.sql`: you partially include it when you do the [snowflake/keys] README. The script is documented.
 - `sql/01-cdc-to-replica-mysql.sql`: create a view similar to the original MySQL table, and the necessary to replicate 
     the events uploaded to Snowflake
 - `sql/01-cdc-to-replica-postgres.sql`: like the MySQL, but for the PostgreSQL table
@@ -60,10 +57,9 @@ Configure your Snowflake account replication with:
 
 ### Sink connector
 
-If you review the detail about the [cdc_config](../cdc_config/README.md), you should have context about the Kafka connect
-and how to configure it.
+If you review the detail about the [debezium], you should have context about the Kafka connect
+and how to configure it. As you can see, [this connector] is very similar:
 
-As you can see, [this connector](./connect/snowflake-sink-connector.json) is very similar:
 - Common connector parts (name, connector class, ...)
 - Snowflake connection properties and destination definition
    - You should configure your Snowflake account (url, user, keys...)
@@ -75,7 +71,7 @@ As you can see, [this connector](./connect/snowflake-sink-connector.json) is ver
    - `value.converter`: like the `key.converter`, but with a focus on the value of the event
    - `behavior.on.null.values`
       - Specific property of the Snowflake converters (but exist generic alternatives)
-      - In [cdc_config](../cdc_config/README.md) explain about how to Debezium transform the DELETE actions 
+      - In [debezium] explain about how to Debezium transform the DELETE actions 
         into two events (one with the delete operation, and another with `null` value)
       - An `null` value makes sense in Kafka context, but not for a database (like Snowflake), for this reason, configure as `IGNORE`: 
         these events will not upload to Snowflake
@@ -209,6 +205,7 @@ all the process is not affected, all runs fine. The unique change is the view:
 - Coexistence of old and new data
 - The schema of each data is included with the data
 
-
-[docker/credentials]: ../docker/credentials
+[debezium]: ../debezium/README.md
+[this connector]: ./connect/snowflake-sink-connector.json
+[snowflake/keys]: keys/
 [KIP-297]: https://cwiki.apache.org/confluence/display/KAFKA/KIP-297%3A+Externalizing+Secrets+for+Connect+Configurations

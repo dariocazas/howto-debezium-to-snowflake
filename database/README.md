@@ -4,18 +4,38 @@
 ![PostgreSQL-logo](../.images/PostgreSQL_logo.3colors.120x120.png)
 ![MySQL-logo](../.images/logo-mysql-170x115.png)
 
+  * [Access to database shell](#access-to-database-shell)
+  * [Tables](#tables)
+  * [CRUD operations](#crud-operations)
+
+
 As part of this howto, I provide:
 
 - SQL scripts to create new tables and data
 - Bash scripts to apply the SQL over the dockerized databases
 
+## Access to database shell
+
+You can open the shell of your database and run it your commands:
+
+```sh
+# Go to services folder (important)
+cd howto-debezium-to-snowflake/services
+
+# Access to MySQL shell
+docker-compose exec mysql \
+    bash -c 'mysql -u $MYSQL_USER -p$MYSQL_PASSWORD inventory'
+
+# Access to Postgres shell
+docker-compose exec postgres \
+    env PGOPTIONS="--search_path=inventory" \
+    bash -c 'psql -U $POSTGRES_USER postgres'
+```
+
 ## Tables
 
 Well, to simplify the howto, we use database images provided by Debezium.
-Review [docker readme] about the databases available, and run the docker-compose
-to start the instances.
-
-When the instances are UP, you should perform this script:
+When the service databases are UP, you should perform this script:
 
 ```sh
 ./init_db.sh
@@ -23,8 +43,6 @@ When the instances are UP, you should perform this script:
 
 This script initializes tables in both database instances (MySQL and PostgreSQL)
 loaded from `./sql` folder.
-
-For accessing MySQL shell or PostgreSQL shell, review the [docker readme]. 
 
 The SQL script [`sql/00_mysql_init.sql`](./sql/00_mysql_init.sql) create the
 **users table** with five basic fields, common for a lot of databases.
@@ -49,6 +67,3 @@ I provide two scripts:
 You can launch these scripts over and over again to generate new data in the database,
 which via CDC will be replicated as events in Kafka.
 
-Return to global [README](../README.md) to check next steps.
-
-[docker readme]: ../docker/README.md

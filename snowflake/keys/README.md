@@ -7,7 +7,7 @@
 To use snowflake need to create a free trial: https://signup.snowflake.com/trial
 
 You can select a Standard Snowflake edition over several clouds. 
-After validate email an access to the web console, you can see that exists:
+After validate email and access to the web console, you can see that exists:
 
 - The host accessed in the URL is your configuration for the snowflake connector
 - In left panel, you can see the DEMO_DB database with a PUBLIC schema
@@ -26,6 +26,15 @@ to use with snowflake:
 ```sh
 openssl genrsa -out docker/credentials/snowflake_rsa_key.pem 2048
 openssl rsa -in docker/credentials/snowflake_rsa_key.pem -pubout -out docker/credentials/snowflake_rsa_key.pub
+```
+
+If you don't have a [OpenSSL tookit] installed in your environment, you can run 
+this commands with docker:
+
+```sh
+docker run -v $PWD:/work -it nginx openssl genrsa -out /work/docker/credentials/snowflake_rsa_key.pem 2048
+docker run -v $PWD:/work -it nginx openssl rsa -in /work/docker/credentials/snowflake_rsa_key.pem -pubout -out /work/docker/credentials/snowflake_rsa_key.pub
+sudo chown -R $USER:$USER docker/credentials/*
 ```
 
 The content of the keys is similar to the content in this repo 

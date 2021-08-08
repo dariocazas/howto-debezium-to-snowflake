@@ -2,24 +2,21 @@
 
 ![Debezum-logo](../.images/color_white_debezium_type_600px.svg)
 
+  * [Usage](#usage)
+  * [Context](#context)
+    + [Change Events](#change-events)
+    + [Connector actions](#connector-actions)
+    + [Connectors config](#connectors-config)
+      - [MySQL connector](#mysql-connector)
+      - [PostgreSQL connector](#postgresql-connector)
+      - [Secret management](#secret-management)
+
 As part of this howto, I provide:
 
 - Kafka connect configurations to capture changes from MySQL and PostgreSQL databases
 - Scripts to create, destroy and check the status of these connectors
 
-## Quick steps
-
-### Preconditions
-
-Review [docker readme] about the databases available, and run the docker-compose
-to start services over you run Debezium.
-
-It isn't necessary to run the described process in [database readme]: when the 
-cdc_connect service and database services are UP, you can init the CDC.
-Obviously, topics will not be created or changes will be captured until 
-the different steps described in [database readme].
-
-### Scripts
+## Usage
 
 This folder includes three scripts, that perform actions against the docker service `cdc_connector`:
 
