@@ -4,6 +4,11 @@
 ![PostgreSQL-logo](../.images/PostgreSQL_logo.3colors.120x120.png)
 ![MySQL-logo](../.images/logo-mysql-170x115.png)
 
+  * [Access to database shell](#access-to-database-shell)
+  * [Tables](#tables)
+  * [CRUD operations](#crud-operations)
+
+
 As part of this howto, I provide:
 
 - SQL scripts to create new tables and data

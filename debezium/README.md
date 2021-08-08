@@ -2,6 +2,15 @@
 
 ![Debezum-logo](../.images/color_white_debezium_type_600px.svg)
 
+  * [Usage](#usage)
+  * [Context](#context)
+    + [Change Events](#change-events)
+    + [Connector actions](#connector-actions)
+    + [Connectors config](#connectors-config)
+      - [MySQL connector](#mysql-connector)
+      - [PostgreSQL connector](#postgresql-connector)
+      - [Secret management](#secret-management)
+
 As part of this howto, I provide:
 
 - Kafka connect configurations to capture changes from MySQL and PostgreSQL databases

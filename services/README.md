@@ -2,6 +2,14 @@
 
 ![docker-logo](../.images/horizontal-logo-monochromatic-white.png)
 
+  * [Usage](#usage)
+  * [Context](#context)
+    + [Docker-compose detail](#docker-compose-detail)
+    + [Access to containers](#access-to-containers)
+      - [Kafka commands](#kafka-commands)
+      - [Database commands](#database-commands)
+  * [References](#references)
+
 As part of this howto, I provide:
 
 - A docker-compose to run it

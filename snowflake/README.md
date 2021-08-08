@@ -2,6 +2,16 @@
 
 ![Snowflake-logo](../.images/Snowflake_Logo.svg.png)
 
+  * [Sink to Snowflake scripts](#sink-to-snowflake-scripts)
+    + [Snowflake scripts](#snowflake-scripts)
+  * [Context](#context)
+    + [Sink connector](#sink-connector)
+    + [Snowflake security](#snowflake-security)
+    + [Snowflake resource naming used](#snowflake-resource-naming-used)
+    + [Snowflake CDC Debeizum table](#snowflake-cdc-debeizum-table)
+    + [Snowflake replica table](#snowflake-replica-table)
+    + [The final view](#the-final-view)
+
 As part of this howto, I provide:
 
 - Kafka connect configurations to push event changes from CDC topics to Snowflake

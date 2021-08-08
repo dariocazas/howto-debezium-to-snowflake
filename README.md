@@ -1,5 +1,16 @@
 # Debezium to Snowflake
 
+  * [Requirements](#requirements)
+  * [Organization](#organization)
+  * [How-to steps](#how-to-steps)
+    + [Start Services](#start-services)
+    + [Configure Database tables](#configure-database-tables)
+    + [Start Debezium Capture](#start-debezium-capture)
+    + [Create Snowflake Account](#create-snowflake-account)
+    + [Start Sink Process Snowflake](#start-sink-process-snowflake)
+    + [Configure Table Replication Snowflake](#configure-table-replication-snowflake)
+  * [I need more!!](#i-need-more--)
+
 This repo is a demo of how to use Debezium to capture changes over tables in MySQL and PostgreSQL 
 to generate a replica in near-real-time in Snowflake. This is extensible to other databases and
 describes several common points about CDC, Kafka, Kafka connect, or Snowflake tools. 
