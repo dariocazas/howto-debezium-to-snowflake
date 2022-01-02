@@ -2,6 +2,9 @@
 -- https://docs.snowflake.com/en/user-guide/data-pipelines-examples.html#transforming-loaded-json-data-on-a-schedule
 -- https://docs.snowflake.com/en/sql-reference/sql/merge.html
 
+-- In this howto, the snowflake connector create the table with role accountadmin. To keep the howto simple, only add grants to sysadmin over the table
+use role accountadmin;
+grant ownership on table "HOWTO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_PRODUCT" to role sysadmin copy current grants;
 
 -- To simplify the howto, we only use role sysadmin. Remember review/apply 00-security.sql script
 use role sysadmin;
@@ -9,7 +12,7 @@ use role sysadmin;
 
 -- Create the replica table, including extra columns to support replica logic and process trazability
 create or replace 
-    table "DEMO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_PRODUCT" 
+    table "HOWTO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_PRODUCT" 
     ( id number PRIMARY KEY comment 'primary key of the source table'
     , sourcedb_lsn string comment 'postgres log sequence number, used for ordering events (RECORD_CONTENT:payload.source.lsn)'
     , payload variant comment 'data after operation (RECORD_CONTENT:payload.after)'
@@ -21,19 +24,19 @@ create or replace
 comment = 'Replica from CDC over PostgreSQL Inventory Products';
 
 -- Create final view with same columns as PostgreSQL database to use like the same table
-create or replace view "DEMO_DB"."PUBLIC"."POSTGRESDB_INVENTORY_PRODUCT"
+create or replace view "HOWTO_DB"."PUBLIC"."POSTGRESDB_INVENTORY_PRODUCT"
 as 
     select payload:id id, payload:name name, payload:description description, payload:created_on created_on
-    from "DEMO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_PRODUCT";
+    from "HOWTO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_PRODUCT";
 
 -- Create a stream from CDC events table, to process new events into replica table
 create or replace 
-    stream "DEMO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_PRODUCT_STREAM_REPLICATION" 
-    on table "DEMO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_PRODUCT";
+    stream "HOWTO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_PRODUCT_STREAM_REPLICATION" 
+    on table "HOWTO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_PRODUCT";
 
 
 -- After create stream (avoid loss events), process all events available in CDC events table
-merge into "DEMO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_PRODUCT" replica_table
+merge into "HOWTO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_PRODUCT" replica_table
     using 
         (with 
             prequery as (select RECORD_METADATA:key.payload.id id
@@ -43,7 +46,7 @@ merge into "DEMO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_PRODUCT" replica_tab
                     , RECORD_CONTENT:payload.source cdc_source_info
                     , RECORD_CONTENT:payload.source.ts_ms ts_ms_sourcedb
                     , RECORD_CONTENT:payload.ts_ms ts_ms_cdc                        
-                from "DEMO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_PRODUCT"),
+                from "HOWTO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_PRODUCT"),
             rank_query as (select *
                     , ROW_NUMBER() over (PARTITION BY id 
                         order by ts_ms_cdc desc, sourcedb_lsn desc) as row_num
@@ -72,14 +75,14 @@ merge into "DEMO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_PRODUCT" replica_tab
 
 
 -- Create task with previous tested query, but read data from the created stream (not CDC events table).
-create or replace task "DEMO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_PRODUCT_TASK_REPLICATION"
+create or replace task "HOWTO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_PRODUCT_TASK_REPLICATION"
     warehouse = compute_wh
     schedule = '1 minute'
     allow_overlapping_execution = false
     when
-        system$stream_has_data('DEMO_DB.PUBLIC.CDC_POSTGRESDB_INVENTORY_PRODUCT_STREAM_REPLICATION')
+        system$stream_has_data('HOWTO_DB.PUBLIC.CDC_POSTGRESDB_INVENTORY_PRODUCT_STREAM_REPLICATION')
     as
-merge into "DEMO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_PRODUCT" replica_table
+merge into "HOWTO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_PRODUCT" replica_table
     using 
         (with 
             prequery as (select RECORD_METADATA:key.payload.id id
@@ -89,7 +92,7 @@ merge into "DEMO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_PRODUCT" replica_tab
                     , RECORD_CONTENT:payload.source cdc_source_info
                     , RECORD_CONTENT:payload.source.ts_ms ts_ms_sourcedb
                     , RECORD_CONTENT:payload.ts_ms ts_ms_cdc                        
-                from "DEMO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_PRODUCT_STREAM_REPLICATION"),
+                from "HOWTO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_PRODUCT_STREAM_REPLICATION"),
             rank_query as (select *
                     , ROW_NUMBER() over (PARTITION BY id 
                         order by ts_ms_cdc desc, sourcedb_lsn desc) as row_num
@@ -118,20 +121,20 @@ merge into "DEMO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_PRODUCT" replica_tab
 
 
 -- Enable task
-ALTER TASK "DEMO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_PRODUCT_TASK_REPLICATION" RESUME;
+ALTER TASK "HOWTO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_PRODUCT_TASK_REPLICATION" RESUME;
 
 -- Check info about the task executions (STATE and NEXT_SCHEDULED_TIME columns)
 -- If you see error "Cannot execute task , EXECUTE TASK privilege must be granted to owner role" 
 -- review 00-security.sql script
 select *
-  from table(demo_db.information_schema.task_history())
+  from table(HOWTO_DB.information_schema.task_history())
   order by scheduled_time desc;
 
 
 -- Check counts (you don't see the same results in event table against the replica table)
 select to_char(RECORD_CONTENT:payload.op) cdc_operation, count(*), 'CDC_POSTGRESDB_INVENTORY_PRODUCT' table_name 
-    from "DEMO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_PRODUCT" group by RECORD_CONTENT:payload.op
+    from "HOWTO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_PRODUCT" group by RECORD_CONTENT:payload.op
 union all
 select cdc_operation, count(*), 'REPLICA_POSTGRESDB_INVENTORY_PRODUCT' table_name
-    from "DEMO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_PRODUCT" group by cdc_operation
+    from "HOWTO_DB"."PUBLIC"."REPLICA_POSTGRESDB_INVENTORY_PRODUCT" group by cdc_operation
 order by table_name, cdc_operation;

@@ -3,13 +3,17 @@
 -- https://docs.snowflake.com/en/sql-reference/sql/merge.html
 
 
+-- In this howto, the snowflake connector create the table with role accountadmin. To keep the howto simple, only add grants to sysadmin over the table
+use role accountadmin;
+grant ownership on table "HOWTO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS" to role sysadmin copy current grants;
+
 -- To simplify the howto, we only use role sysadmin. Remember review/apply 00-security.sql script
 use role sysadmin;
 
 
 -- Create the replica table, including extra columns to support replica logic and process trazability
 create or replace 
-    table "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_USERS" 
+    table "HOWTO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_USERS" 
     ( id number PRIMARY KEY comment 'primary key of the source table'
     , sourcedb_binlog_gtid string comment 'database log position, gtid used in HA MySQL (null in other cases), used for ordering events (RECORD_CONTENT:payload.source.gtid)'
     , sourcedb_binlog_file string comment 'database log position, file log name, used for ordering events (RECORD_CONTENT:payload.source.file)'
@@ -23,19 +27,19 @@ create or replace
 comment = 'Replica from CDC over MySQL Inventory Users';
 
 -- Create final view with same columns as MySQL database to use like the same table
-create or replace view "DEMO_DB"."PUBLIC"."MYSQL_INVENTORY_USERS"
+create or replace view "HOWTO_DB"."PUBLIC"."MYSQL_INVENTORY_USERS"
 as 
     select payload:id id, payload:name name, payload:email email, payload:password password, payload:created_on created_on
-    from "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_USERS";
+    from "HOWTO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_USERS";
 
 -- Create a stream from CDC events table, to process new events into replica table
 create or replace 
-    stream "DEMO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS_STREAM_REPLICATION" 
-    on table "DEMO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS";
+    stream "HOWTO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS_STREAM_REPLICATION" 
+    on table "HOWTO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS";
 
 
 -- After create stream (avoid loss events), process all events available in CDC events table
-merge into "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_USERS" replica_table
+merge into "HOWTO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_USERS" replica_table
     using 
         (with 
             prequery as (select RECORD_METADATA:key.payload.id id
@@ -47,7 +51,7 @@ merge into "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_USERS" replica_table
                     , RECORD_CONTENT:payload.source cdc_source_info
                     , RECORD_CONTENT:payload.source.ts_ms ts_ms_sourcedb
                     , RECORD_CONTENT:payload.ts_ms ts_ms_cdc                        
-                from "DEMO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS"),
+                from "HOWTO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS"),
             rank_query as (select *
                     , ROW_NUMBER() over (PARTITION BY id 
                         order by ts_ms_cdc desc, sourcedb_binlog_file desc, sourcedb_binlog_pos desc) as row_num
@@ -79,14 +83,14 @@ merge into "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_USERS" replica_table
 
 
 -- Create task with previous tested query, but read data from the created stream (not CDC events table).
-create or replace task "DEMO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS_TASK_REPLICATION"
+create or replace task "HOWTO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS_TASK_REPLICATION"
     warehouse = compute_wh
     schedule = '1 minute'
     allow_overlapping_execution = false
     when
-        system$stream_has_data('DEMO_DB.PUBLIC.CDC_MYSQL_INVENTORY_USERS_STREAM_REPLICATION')
+        system$stream_has_data('HOWTO_DB.PUBLIC.CDC_MYSQL_INVENTORY_USERS_STREAM_REPLICATION')
     as
-merge into "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_USERS" replica_table
+merge into "HOWTO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_USERS" replica_table
     using 
         (with 
             prequery as (select RECORD_METADATA:key.payload.id id
@@ -98,7 +102,7 @@ merge into "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_USERS" replica_table
                     , RECORD_CONTENT:payload.source cdc_source_info
                     , RECORD_CONTENT:payload.source.ts_ms ts_ms_sourcedb
                     , RECORD_CONTENT:payload.ts_ms ts_ms_cdc                        
-                from "DEMO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS_STREAM_REPLICATION"),
+                from "HOWTO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS_STREAM_REPLICATION"),
             rank_query as (select *
                     , ROW_NUMBER() over (PARTITION BY id 
                         order by ts_ms_cdc desc, sourcedb_binlog_file desc, sourcedb_binlog_pos desc) as row_num
@@ -130,20 +134,20 @@ merge into "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_USERS" replica_table
 
 
 -- Enable task
-ALTER TASK "DEMO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS_TASK_REPLICATION" RESUME;
+ALTER TASK "HOWTO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS_TASK_REPLICATION" RESUME;
 
 -- Check info about the task executions (STATE and NEXT_SCHEDULED_TIME columns)
 -- If you see error "Cannot execute task , EXECUTE TASK privilege must be granted to owner role" 
 -- review 00-security.sql script
 select *
-  from table(demo_db.information_schema.task_history())
+  from table(HOWTO_DB.information_schema.task_history())
   order by scheduled_time desc;
 
 
 -- Check counts (you don't see the same results in event table against the replica table)
 select to_char(RECORD_CONTENT:payload.op) cdc_operation, count(*), 'CDC_MYSQL_INVENTORY_USERS' table_name 
-    from "DEMO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS" group by RECORD_CONTENT:payload.op
+    from "HOWTO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS" group by RECORD_CONTENT:payload.op
 union all
 select cdc_operation, count(*), 'REPLICA_MYSQL_INVENTORY_USERS' table_name
-    from "DEMO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_USERS" group by cdc_operation
+    from "HOWTO_DB"."PUBLIC"."REPLICA_MYSQL_INVENTORY_USERS" group by cdc_operation
 order by table_name, cdc_operation;
