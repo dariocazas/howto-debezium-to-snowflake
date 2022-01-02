@@ -10,7 +10,7 @@ run_sql() {
         bash -c 'mysql -u $MYSQL_USER -p$MYSQL_PASSWORD inventory 2> /dev/null'
 }
 
-DML=`cat sql/01_mysql_changes.sql`
+DML=$(cat sql/01_mysql_changes.sql)
 
 cd $DOCKER_COMPOSE_RELATIVE_PATH
 run_sql "$DML"

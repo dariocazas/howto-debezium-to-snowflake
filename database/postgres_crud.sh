@@ -11,7 +11,7 @@ run_sql() {
         bash -c 'psql -U $POSTGRES_USER postgres 2> /dev/null'
 }
 
-DML=`cat sql/01_postgres_changes.sql`
+DML=$(cat sql/01_postgres_changes.sql)
 
 cd $DOCKER_COMPOSE_RELATIVE_PATH
 run_sql "$DML"
