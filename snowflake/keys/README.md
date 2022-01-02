@@ -4,7 +4,7 @@
 
 ### Create your account
 
-To use snowflake need to create a free trial: https://signup.snowflake.com/trial
+To use snowflake need to create a free trial: https://signup.snowflake.com
 
 You can select a Standard Snowflake edition over several clouds. 
 After validate email and access to the web console, you can see that exists:
@@ -24,17 +24,21 @@ To simplify the management, we generate a unencrypted private key (and a public 
 to use with snowflake:
 
 ```sh
-openssl genrsa -out docker/credentials/snowflake_rsa_key.pem 2048
-openssl rsa -in docker/credentials/snowflake_rsa_key.pem -pubout -out docker/credentials/snowflake_rsa_key.pub
+cd snowflake/keys
+openssl genrsa -out snowflake_rsa_key.pem 2048
+openssl pkcs8 -topk8 -inform PEM -in snowflake_rsa_key.pem -out snowflake_rsa_key.p8
+openssl rsa -in snowflake_rsa_key.p8 -pubout -out snowflake_rsa_key.pub
 ```
 
-If you don't have a [OpenSSL tookit] installed in your environment, you can run 
+If you don't have a [OpenSSL toolkit] installed in your environment, you can run 
 this commands with docker:
 
 ```sh
-docker run -v $PWD:/work -it nginx openssl genrsa -out /work/docker/credentials/snowflake_rsa_key.pem 2048
-docker run -v $PWD:/work -it nginx openssl rsa -in /work/docker/credentials/snowflake_rsa_key.pem -pubout -out /work/docker/credentials/snowflake_rsa_key.pub
-sudo chown -R $USER:$USER docker/credentials/*
+cd snowflake
+docker run -v $PWD:/work -it nginx openssl genrsa -out /work/keys/snowflake_rsa_key.pem 2048
+docker run -v $PWD:/work -it nginx openssl pkcs8 -topk8 -inform PEM -in /work/keys/snowflake_rsa_key.pem -out /work/keys/snowflake_rsa_key.p8
+docker run -v $PWD:/work -it nginx openssl rsa -in /work/keys/snowflake_rsa_key.pem -pubout -out /work/keys/snowflake_rsa_key.pub
+sudo chown -R $USER:$USER keys/*
 ```
 
 The content of the keys is similar to the content in this repo 
@@ -42,17 +46,17 @@ The content of the keys is similar to the content in this repo
 
 ```sh
 cat docker/credentials/snowflake_rsa_key.pem
------BEGIN RSA PRIVATE KEY-----
-MIIE6TAbBgkqhkiG9w0BBQMwDgQILYPyCppzOwECAggABIIEyLiGSpeeGSe3xHP1
-wHLjfCYycUPennlX2bd8yX8xOxGSGfvB+99+PmSlex0FmY9ov1J8H1H9Y3lMWXbL
+-----BEGIN ENCRYPTED PRIVATE KEY-----
+MIIFLTBXBgkqhkiG9w0BBQ0wSjApBgkqhkiG9w0BBQwwHAQIHl29yM4BvgICAggA
+MAwGCCqGSIb3DQIJBQAwHQYJYIZIAWUDBAEqBBCkFIfNB88Urq5VaPCCzze1BIIE
 ...
------END RSA PRIVATE KEY-----
+-----END ENCRYPTED PRIVATE KEY-----
 ```
 ```sh
 cat docker/credentials/snowflake_rsa_key.pub
 -----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAy+Fw2qv4Roud3l6tjPH4
-zxybHjmZ5rhtCz9jppCV8UTWvEXxa88IGRIHbJ/PwKW/mR8LXdfI7l/9vCMXX4mk
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwBwYbPtbEUXueQ6u3KDw
+zlKu4IhAkGdcUBVbdTdUVBLNVsZX+eiKOedN3EnMtDeVzRlaT8JAwHX0LVXkgXtn
 ...
 -----END PUBLIC KEY-----
 ```
@@ -67,13 +71,13 @@ Take your public key (without header and footer) and use it to registry in snowf
 using the web console over your user:
 
 ```sql
-alter user dariocazas set rsa_public_key='MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArJFv7/40nuy8D4FC76wQ
-Qkz1FHnEhS8jvXVTrSGzlJoTRrKm3Nx039+PPgz0EkzW/WiUdyPF6G4ZJh5L9+WU
-6xEQo9HGFJhA4U4rOOXv9q3SlZEMndpg9qbGd6mp/ym5GZ9lznBVc33oQO2lIWum
-j8EmuYn7SLpceY7iCUtCrGgu2gE+OxHcajvQPccdMtNlz+LfXXCe+4By7PGQuBkR
-9wO0wkhoYfRdInvATRSpGJK8jtAmxe9UelobyeEFsbFVqsXruOw1LbNF2bq3IAaQ
-TvD5OVYcfyQ+nDrE55AngRAfewpur09laqYfqzYvVZjutZc2InD4VuSVouGc8bYg
-qwIDAQAB';
+alter user dariocazas set rsa_public_key='MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwBwYbPtbEUXueQ6u3KDw
+zlKu4IhAkGdcUBVbdTdUVBLNVsZX+eiKOedN3EnMtDeVzRlaT8JAwHX0LVXkgXtn
+KzMBp6TpS4j+2kKvbZc5p0KfZHjn42G+C/DXI4ZNQZEBQ/Q4UY6OkTZepFaOX3ev
+2icxB6LnnVYI3WHkSnq3vTthhYhTuUOQ4YRudadOtoT4By09hxbsaanVl42FXIZP
+AXX1jwawzKe52V1+FB5/UMv+JMUFfczlO+acn/EaZvKbR55Vk/+OVrUP4KIKvdWn
+s/n4ASYqxiw9xjrizGCoUyl+b+Ch6A02fTU02HrT9jOOj+dVAeFD2QGOqaze0eCD
+dwIDAQAB';
 ```
 
 After do this, you can use the __snowflake_rsa_key.pem__ private key from kafka
