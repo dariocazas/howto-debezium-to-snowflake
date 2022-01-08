@@ -2,14 +2,8 @@
 -- https://docs.snowflake.com/en/user-guide/data-pipelines-examples.html#transforming-loaded-json-data-on-a-schedule
 -- https://docs.snowflake.com/en/sql-reference/sql/merge.html
 
-
--- In this howto, the snowflake connector create the table with role accountadmin. To keep the howto simple, only add grants to sysadmin over the table
+-- Use this role is not recomendable in production environments
 use role accountadmin;
-grant ownership on table "HOWTO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS" to role sysadmin copy current grants;
-
--- To simplify the howto, we only use role sysadmin. Remember review/apply 00-security.sql script
-use role sysadmin;
-
 
 -- Create the replica table, including extra columns to support replica logic and process trazability
 create or replace 

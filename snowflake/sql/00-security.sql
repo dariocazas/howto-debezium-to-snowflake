@@ -13,7 +13,3 @@ j8EmuYn7SLpceY7iCUtCrGgu2gE+OxHcajvQPccdMtNlz+LfXXCe+4By7PGQuBkR
 TvD5OVYcfyQ+nDrE55AngRAfewpur09laqYfqzYvVZjutZc2InD4VuSVouGc8bYg
 qwIDAQAB';
 
-
--- To simplify the howto, adding privilege EXECUTE TASK to role sysadmin
--- https://docs.snowflake.com/en/user-guide/tasks-ts.html#step-3-verify-the-permissions-granted-to-the-task-owner
-grant EXECUTE TASK on account to role sysadmin;
