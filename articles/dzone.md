@@ -27,16 +27,16 @@ git clone https://github.com/dariocazas/howto-debezium-to-snowflake.git
 
 The follow steps are:
 
-0. Pre-requirements
+1. Pre-requirements
    1. Local environment
    2. Snowflake database
    3. Snowflake authentication
-1. How to capture data changes from databases to a Kafka topic
+2. How to capture data changes from databases to a Kafka topic
    1. Start local services
    2. Prepare databases
    3. Start Debezium
    4. Check data capture
-2. How to push data changes from Kafka topic into Snowflake
+3. How to push data changes from Kafka topic into Snowflake
    1. Start local sink process
    2. Check data capture into CDC tables
    3. Apply replication logic
@@ -44,13 +44,13 @@ The follow steps are:
 
 ![steps](.images/solution-solution-points.png)
 
-## 0. Pre-requirements
+## 1. Pre-requirements
 
-### 0.1 Local environment 
+### 1.1. Local environment 
 - [docker-compose](https://docs.docker.com/compose/install/) and [docker engine](https://docs.docker.com/engine/) 1.10.0 or later should work.
 - [jq](https://stedolan.github.io/jq/download/) as a JSON parser used in scripts
 
-### 0.2 Snowflake database
+### 1.2. Snowflake database
 
 You need a Snowflake Account. You can create a trial follow the [Snowflake Trial Accounts doc](https://docs.snowflake.com/en/user-guide/admin-trial-account.html))
 
@@ -63,7 +63,7 @@ CREATE DATABASE HOWTO_DB;
 
 > Note: in a production environment, is not recommendable to use role ACCOUNTADMIN for all the tasks like I describe in this howto. 
 
-### 0.3 Snowflake authentication
+### 1.3. Snowflake authentication
 
 In this howto, we use a key-pair authentication. The detailed process is documented [here](https://docs.snowflake.com/en/user-guide/kafka-connector-install.html#using-key-pair-authentication-key-rotation). You can use the key-pair provided by the repository:
 * Private key encrypted: `snowflake/keys/snowflake_rsa_key.p8`
@@ -83,13 +83,13 @@ s/n4ASYqxiw9xjrizGCoUyl+b+Ch6A02fTU02HrT9jOOj+dVAeFD2QGOqaze0eCD
 dwIDAQAB';
 ```
 
-## 1. How to capture data changes from databases to a Kafka topic
+## 2. How to capture data changes from databases to a Kafka topic
 
 In this step, you start two different database engine and enable a CDC process. As result, you have two Kafka topics with Debezium events that you can consume.
 
 ![capture-data-changes](.images/solution-capture-data-changes.png)
 
-### 1.1 Start local services
+### 2.1. Start local services
 
 The repository contains a docker-compose to run in your local environment several services:
 * Two database engines: MySQL and PostgreSQL
@@ -107,7 +107,7 @@ docker-compose up
 
 It can take several minutes to download and start the services. Keep this terminal open to be able to see the log of services. In the end, you can stop all using `Ctrl+C`. 
 
-### 1.2 Prepare databases
+### 2.2. Prepare databases
 
 I provide SQL initialization scripts:
 * database/sql/00_mysql_init.sql: create table `users`
@@ -126,7 +126,7 @@ cd database
 
 As output, you can see several CRUD operations over the tables, and the last state after operations. You can close this terminal.
 
-### 1.3 Start Debezium
+### 2.3. Start Debezium
 
 The docker service `cdc_connect` has the necessary dependencies to run Debezium over MySQL and Postgres. The configuration is available in:
 * `debezium/connect/debezium-mysql-inventory-connector.json`
@@ -140,13 +140,13 @@ cd debezium
 
 In docker-compose terminal, you can see how the connectors start. When the log stabilizes, you can check the status of the Debezium connectors in the previous terminal using:
 ```sh
-# asume you are in debezium folder
+# I asume you are in debezium folder
 ./status_cdc.sh
 ```
 
 You can close this terminal.
 
-### 1.4 Check data capture
+### 2.4. Check data capture
 
 You can test if the capture is working with this strategy:
 * Open a terminal with live consumer events
@@ -174,19 +174,20 @@ docker-compose exec kafka /kafka/bin/kafka-console-consumer.sh \
 
 To generate new events, open a terminal and run:
 ```sh
+cd database
 ./mysql_crud.sh
 ./postgres_crud.sh
 ```
 
 You should see new data change events in the consumer terminals.
 
-## 2. How to push data changes from Kafka topic into Snowflake
+## 3. How to push data changes from Kafka topic into Snowflake
 
 In this step, you send the Kafka events to Snowflake and generate a replica of the source tables.
 
 ![sink-snowflake](.images/solution-sink-snowflake.png)
 
-### 2.1 Start local sink process
+### 3.1. Start local sink process
 
 The docker service `sink_connect` has the necessary dependencies to run the Snowflake Sink connector to push new Kafka events into the Snowflake table. The configuration is available in `snowflake/connect/snowflake-sink-connector.json` and you need an update:
 * The Snowflake URL with yours in field `snowflake.url.name`
@@ -200,11 +201,11 @@ cd snowflake
 
 In docker-compose terminal, you can see how the connector starts. When the log stabilizes, you can check the status of the Snowflake connector in the previous terminal using:
 ```sh
-# asume you are in debezium folder
+# I asume you are in snowflake folder
 ./status_sink.sh
 ```
 
-### 2.2 Check data capture into CDC tables
+### 3.2. Check data capture into CDC tables
 
 When the sink connector uploads the events from the Kafka topics, create these tables:
 * `CDC_MYSQL_INVENTORY_USERS`
@@ -237,7 +238,7 @@ Adding new changes in your dockerized databases produces new rows in your tables
 3. Wait until the events will be sent to Snowflake (you can see the log in docker-compose terminal)
 4. Repeat the query in Snowflake Worksheet
 
-### 2.3 Apply replication logic
+### 3.3. Apply replication logic
 
 In the repository I provide two scripts with the SQL logic to generate the replica of the source tables:
 * `snowflake/sql/01-cdc-to-replica-mysql.sql`
@@ -251,9 +252,9 @@ These scripts follow the same logic, creating a scheduled task that process the 
 
 ![replication](.images/solution-replication.png)
 
-> Note: one part of these SQL scripts (the MERGE sentence) depends on which database engine generate the events. The Debezium events have the metadata about the source engine and is used to know which is the last event for an entity. Take into account if you replicate this logic in your production systems.
+> Note: one part of these SQL scripts (the MERGE sentence) depends on the source database engine. The Debezium events have the metadata about the source engine and is used to know which is the last event for an entity. Take into account if you replicate this logic in your production systems.
 
-### 2.4 Check data replication
+### 3.4. Check data replication
 
 The end-to-end is running now. You can check the data available in your local databases and validate against Snowaflake view:
 1. In a terminal, get the actual state of MySQL users table:
@@ -271,7 +272,7 @@ The end-to-end is running now. You can check the data available in your local da
    ```
 3. In a terminal, get the actual state of PostgreSQL product table
    ```sh
-   cd services
+   # I asume you are in services folder
    echo "SELECT * FROM product ORDER BY id" |  docker-compose \
       exec -T postgres \
       env PGOPTIONS="--search_path=inventory" \
