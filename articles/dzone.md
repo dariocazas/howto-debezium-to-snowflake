@@ -1,150 +1,79 @@
-
 # Introduction
 
-This article is a follow-up to the [Data Platform: Building an Enterprise CDC Solution](https://dzone.com/articles/data-platform-building-an-enterprise-cdc-solution), where [Miguel García](https://dzone.com/articles/data-platform-building-an-enterprise-cdc-solution) and I describe:
+This article is a follow-up to the [Data Platform: Building an Enterprise CDC Solution](https://dzone.com/articles/data-platform-building-an-enterprise-cdc-solution), where [Miguel García](https://dzone.com/articles/data-platform-building-an-enterprise-cdc-solution) and I described:
 
-* From several CDC (Change Data Capture) use cases and common scenarios in an enterprise platform.
-* Until a proposal using Debezium (as log-based CDC) to capture data from the relational databases, and Kafka like a channel that enables several consumers to propagate data changes for different use cases.
+* Several CDC (Change Data Capture) use cases and common scenarios in an enterprise platform
+* A proposal using Debezium (as log-based CDC) to capture data from the relational databases, and Kafka like a channel that enables several consumers to propagate data changes for different use cases.
 
-One of the common scenarios for this type of solution consists of the replication of information from OLTP Database to OLAP Database (from the operational database to the data warehouse), and a simplified version of this solution is the content of this article.
+One of the common scenarios for this solution consists of data replication from OLTP Database to OLAP Database (from the operational database to the data warehouse).
 
-With it in mind, this selection, the howto provides:
-
-* CDC process from two different relational databases, and manage the data changes in a common format
-* Kafka connect to get external data (using Debezium) and puts the data to external services (using Snowflake)
-* Replication logic from change events in Snowflake (but extrapolate to another system), avoiding the use of JDBC connector for better cost-effectiveness.
+In this article, I'm going to provide a "how-to" to deploy a sample of a CDC process to replicate data from two different relational databases to Snowflake:
+* Manage the data changes in a common format.
+* Setting up a Debezium in Kafka Connect to get data changes and push into Kafka topics.
+* Setting up Snowflake Sink in Kafka Connect to get data changes from Kafka topics and push the data to Snowflake.
+* Apply a specific replication logic to consolidate the data changes events in Snowflake, avoiding the use of the JDBC connector for better cost-effectiveness.
 
 ![solution](.images/solution-solution.png)
 
 # Step-by-step
 
-In the GitHub repository, we have a detailed description as well as several scripts that you need to follow this howto. For this reason, the start of this step-by-step is this command:
+In the GitHub repository, we have a detailed description as well as several scripts that you will need in this "how-to":
 
 ```sh
 git clone https://github.com/dariocazas/howto-debezium-to-snowflake.git
 ```
 
-Every folder in this repository has a README file with more info about the process.
+> Note: every folder in this repository has a README file with more info about the process.
 
-## Start local services
+The follow steps are:
 
-The repository contains a docker-compose to run in your local environment several services:
-* Two database engines: MySQL and PostgreSQL
-* One Kafka broker (and his zookeeper)
-* Two Kafka connect services: one to run CDC Debezium tasks and another to send the events to Snowflake
+0. Pre-requirements
+   1. Local environment
+   2. Snowflake database
+   3. Snowflake authentication
+1. How to capture data changes from databases to a Kafka topic
+   1. Start local services
+   2. Prepare databases
+   3. Start Debezium
+   4. Check data capture
+2. How to push data changes from Kafka topic into Snowflake
+   1. Start local sink process
+   2. Check data capture into CDC tables
+   3. Apply replication logic
+   4. Check data replication
 
-![docker-compose](.images/docker-compose.png)
+![steps](.images/solution-solution-points.png)
 
-As requirements to run it, you need [docker-compose](https://docs.docker.com/compose/install/) and [docker engine 1.10.0](https://docs.docker.com/engine/) or later.
+## 0. Pre-requirements
 
-All the docker commands referenced in this howto need to be run inside of services folder. To start it, run these commands (can take several minutes to download dependencies and proceed to the first run)
-```sh
-cd services
-docker-compose up
-```
+### 0.1 Local environment 
+- [docker-compose](https://docs.docker.com/compose/install/) and [docker engine](https://docs.docker.com/engine/) 1.10.0 or later should work.
+- [jq](https://stedolan.github.io/jq/download/) as a JSON parser used in scripts
 
-To stop it, with Crtl+C in your shell is enough.
+### 0.2 Snowflake database
 
-## Prepare your tables 
+You need a Snowflake Account. You can create a trial follow the [Snowflake Trial Accounts doc](https://docs.snowflake.com/en/user-guide/admin-trial-account.html))
 
-We go to work with two tables (one for each database engine): USERS table in MySQL and PRODUCT in PostgreSQL.
-
-To init the database you can run: 
-```sh
-cd database
-# Create the tables in each database engine
-./init_db.sh
-# Run several CRUD operations in MySQL and show the final data
-./mysql_crud.sh
-# Run several CRUD operations in PostgreSQL and show the final data
-./postgres_crud.sh
-```
-
-We can show the content of the tables at any time using:
+Access to your Snowflake Account and create a database over you run the next steps:
 
 ```sh
-# To run docker commands, always go to the services folder
-cd services
-
-echo "SELECT * FROM users ORDER BY id" | docker-compose -f docker-compose.yml \
-    exec -T mysql \
-    bash -c 'mysql -u $MYSQL_USER -p$MYSQL_PASSWORD inventory'
-
-echo "SELECT * FROM product ORDER BY id" |  docker-compose -f docker-compose.yml \
-    exec -T postgres \
-    env PGOPTIONS="--search_path=inventory" \
-    bash -c 'psql -U $POSTGRES_USER postgres'
+USE ROLE ACCOUNTADMIN;
+CREATE DATABASE HOWTO_DB;
 ```
 
-## Capture data to Kafka with Debezium
+> Note: in a production environment, is not recommendable to use role ACCOUNTADMIN for all the tasks like I describe in this howto. 
 
-![debeizum](.images/solution-debezium.png)
+### 0.3 Snowflake authentication
 
-The cdc_connect service has all dependencies needed to run Debezium. The repository provides three scripts to manage the sink:
+In this howto, we use a key-pair authentication. The detailed process is documented [here](https://docs.snowflake.com/en/user-guide/kafka-connector-install.html#using-key-pair-authentication-key-rotation). You can use the key-pair provided by the repository:
+* Private key encrypted: `snowflake/keys/snowflake_rsa_key.p8`
+* Private passphrase to decrypt: `mypassphrase`
+* Public key: `snowflake/keys/snowflake_rsa_key.pub`
 
-```sh
-cd debezium
-./init_cdc.sh
-# After start, you can use ./status_cdc.sh to check task status
-# To stop it, you can use ./delete_cdc.sh
-```
-
-Use the init_sink.sh to dump the actual databases to Change Events in Kafka, and start tracking the new changes in the database. You can see the events available in Kafka using this script:
-
-```sh
-cd services
-
-# List topics
-docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
-
-# Show all CDC MySQL data (including keys for the events). Use Ctrl+C to stop it
-docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-console-consumer.sh \
-    --bootstrap-server kafka:9092 --from-beginning \
-    --topic mysqldb.inventory.users
-
-# Show all CDC MySQL data (including keys for the events and timestamp which the event was received in Kafka)
-docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-console-consumer.sh \
-    --bootstrap-server kafka:9092 --from-beginning \
-    --topic mysqldb.inventory.users \
-    --property print.key=true --property print.timestamp=true
-
-# Show all CDC Posgres data. Use Ctrl+C to stop it
-docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-console-consumer.sh \
-    --bootstrap-server kafka:9092 --from-beginning \
-    --topic postgresdb.inventory.product
-```
-
-
-And using this, you can generate new change events in the topics:
-```sh
-cd database
-# Run several CRUD operations in MySQL and show the final data
-./mysql_crud.sh
-# Run several CRUD operations in PostgreSQL and show the final data
-./postgres_crud.sh
-```
-
-
-## Snowflake Account
-
-We generate a table replication in a new generation of data warehouses and select Snowflake as the target. To run this howto, you can create a free trial account from https://signup.snowflake.com using a **Standard Edition** over the cloud provider as you prefer. Snowflake sends you a validation email which you can use to register your user.
-
-![snowflake_console](.images/snowflake_console.png)
-
-With the standard edition trial, you access to Snowflake worksheet using an URL like https://mh16247.eu-west-2.aws.snowflakecomputing.com/console#/internal/worksheet and the hostname (in this case, mh16247.eu-west-2.aws.snowflakecomputing.com) **is what you need to connect from the tools to Snowflake**.
-
-### Snowflake authentication
-
-The other important thing to connect to Snowflake is the authentication mechanism, and in our case, we need to work with **key-pair authentication**. The detailed process is documented [here](https://docs.snowflake.com/en/user-guide/key-pair-auth.html#configuring-key-pair-authentication) or you can use directly the provided by this repository (the configs and script of this howto using it):
-
-* Private key encrypted: snowflake/keys/snowflake_rsa_key.p8
-* Private passphrase to decrypt: mypassphrase
-* Public key: snowflake/keys/snowflake_rsa_key.pub
-
-As the next step, in the Snowflake Worksheet, we need to **register the public key** (replace in this script the content of your snowflake/keys/snowflake_rsa_key.pub without header and footer)
+As the next step, in the Snowflake Worksheet, we need to register the public key (replace in this script the content of your snowflake/keys/snowflake_rsa_key.pub without header and footer)
 
 ```sql
-USE ROLE ACCOUNTADMIN; -- Should use SECURITYADMIN role for this action, but for this user you need an ACCOUNTADMIN role
+USE ROLE ACCOUNTADMIN;
 ALTER USER dariocazas SET rsa_public_key='MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwBwYbPtbEUXueQ6u3KDw
 zlKu4IhAkGdcUBVbdTdUVBLNVsZX+eiKOedN3EnMtDeVzRlaT8JAwHX0LVXkgXtn
 KzMBp6TpS4j+2kKvbZc5p0KfZHjn42G+C/DXI4ZNQZEBQ/Q4UY6OkTZepFaOX3ev
@@ -154,110 +83,221 @@ s/n4ASYqxiw9xjrizGCoUyl+b+Ch6A02fTU02HrT9jOOj+dVAeFD2QGOqaze0eCD
 dwIDAQAB';
 ```
 
-### Snowflake roles and database
+## 1. How to capture data changes from databases to a Kafka topic
 
-Well, is not a good option use the user with your ACCOUNTADMIN role to populate data in Snowflake, but in this howto will not cover the alternative to keep it more simple.
-In the next steps, your role needs privileges to execute tasks in Snowflake. We will use the SYSADMIN role for it, and we need to apply for grants using:
+In this step, you start two different database engine and enable a CDC process. As result, you have two Kafka topics with Debezium events that you can consume.
 
-```sql
-USE ROLE ACCOUNTADMIN;
-GRANT EXECUTE TASK ON ACCOUNT TO ROLE SYSADMIN;
+![capture-data-changes](.images/solution-capture-data-changes.png)
+
+### 1.1 Start local services
+
+The repository contains a docker-compose to run in your local environment several services:
+* Two database engines: MySQL and PostgreSQL
+* One Kafka broker (and his zookeeper)
+* Two Kafka connect services: one to run CDC Debezium tasks and another to send the events to Snowflake
+
+![docker-compose](.images/docker-compose.png)
+
+In a terminal console run:
+
+```sh
+cd services
+docker-compose up
 ```
 
-At last, create the database where we work in the howto:
+It can take several minutes to download and start the services. Keep this terminal open to be able to see the log of services. In the end, you can stop all using `Ctrl+C`. 
 
-```sql
-USE ROLE SYSADMIN;
-CREATE DATABASE HOWTO_DB;
+### 1.2 Prepare databases
+
+I provide SQL initialization scripts:
+* database/sql/00_mysql_init.sql: create table `users`
+* database/sql/00_postgres_init.sql: create table `product`
+
+Init these tables over the dockerized services:
+
+```sh
+cd database
+# create tables
+./init_db.sh
+# Populate data
+./mysql_crud.sh
+./postgres_crud.sh
 ```
 
-## From Kafka to Snowflake
+As output, you can see several CRUD operations over the tables, and the last state after operations. You can close this terminal.
 
-![kafka-to-snowflake](.images/solution-kafka-to-snowflake.png)
+### 1.3 Start Debezium
 
-We have:
-* Kafka topics with Debezium events
-* Snowflake account with HOWTO_DB database
-* User account and secrets to access it
+The docker service `cdc_connect` has the necessary dependencies to run Debezium over MySQL and Postgres. The configuration is available in:
+* `debezium/connect/debezium-mysql-inventory-connector.json`
+* `debezium/connect/debezium-postgres-inventory-connector.json`
 
-You should review in snowflake/connect/snowflake-sink-connector.json the Snowflake Sink Connection fields:
-* snowflake.url.name: as described when we create the Snowflake Account
-* snowflake.private.key: use the content of your private key encrypted
-* snowflake.private.key.passphrase: used to encrypt the private key
+Open a terminal console and init the capture of the tables:
+```sh
+cd debezium
+./init_cdc.sh
+```
 
-The repository provides three scripts to manage the sink:
+In docker-compose terminal, you can see how the connectors start. When the log stabilizes, you can check the status of the Debezium connectors in the previous terminal using:
+```sh
+# asume you are in debezium folder
+./status_cdc.sh
+```
 
+You can close this terminal.
+
+### 1.4 Check data capture
+
+You can test if the capture is working with this strategy:
+* Open a terminal with live consumer events
+* Do CRUD operations over the database
+
+First for MySQL, open a terminal and run:
+```sh
+cd services
+docker-compose exec kafka /kafka/bin/kafka-console-consumer.sh \
+    --bootstrap-server kafka:9092 --from-beginning \
+    --topic mysqldb.inventory.users \
+    --property print.key=true --property print.timestamp=true
+``` 
+
+The terminal will populate every new event pushed from Debezium to Kafka, sending every insert/update/delete over `inventory.users` in MySQL
+
+Open now a terminal for the same in PostgreSQL:
+```sh
+cd services
+docker-compose exec kafka /kafka/bin/kafka-console-consumer.sh \
+    --bootstrap-server kafka:9092 --from-beginning \
+    --topic postgresdb.inventory.product \
+    --property print.key=true --property print.timestamp=true
+```
+
+To generate new events, open a terminal and run:
+```sh
+./mysql_crud.sh
+./postgres_crud.sh
+```
+
+You should see new data change events in the consumer terminals.
+
+## 2. How to push data changes from Kafka topic into Snowflake
+
+In this step, you send the Kafka events to Snowflake and generate a replica of the source tables.
+
+![sink-snowflake](.images/solution-sink-snowflake.png)
+
+### 2.1 Start local sink process
+
+The docker service `sink_connect` has the necessary dependencies to run the Snowflake Sink connector to push new Kafka events into the Snowflake table. The configuration is available in `snowflake/connect/snowflake-sink-connector.json` and you need an update:
+* The Snowflake URL with yours in field `snowflake.url.name`
+* The authentication fields if you generate your key-pair in the previous step: `snowflake.private.key` and `snowflake.private.key.passphrase`
+
+Open a terminal console and init the upload of the Kafka topics:
 ```sh
 cd snowflake
 ./init_sink.sh
-# After start, you can use ./status_sink.sh
-# To stop it, you can use ./delete_sink.sh
 ```
 
-Use it to start the upload from Kafka to Snowflake. The connector will create the tables when uploading the first events, using the property "snowflake.topic2table.map" as name mapping. To validate it you can execute this shell script:
-
+In docker-compose terminal, you can see how the connector starts. When the log stabilizes, you can check the status of the Snowflake connector in the previous terminal using:
 ```sh
-cd database
-./mysql_crud.sh
-./postgres_crud.sh
+# asume you are in debezium folder
+./status_sink.sh
 ```
 
-And review when the new tables are created and populated with data:
+### 2.2 Check data capture into CDC tables
 
+When the sink connector uploads the events from the Kafka topics, create these tables:
+* `CDC_MYSQL_INVENTORY_USERS`
+* `CDC_POSTGRESDB_INVENTORY_PRODUCT`
+
+The upload to Snowflake will be done in batches, so it may take some time to see the data available in Snowflake (in the order of 30-60 seconds).
+
+From your Snowflake Worksheet, validate that your events are populated in the new tables:
 ```sql
-USE ROLE ACCOUNTADMIN; -- You probably need this by simplifying the management of roles in the howto
-SELECT * FROM "HOWTO_DB"."PUBLIC"."CDC_MYSQL_INVENTORY_USERS"; -- One row per event in Kafka topic mysqldb.inventory.users
-SELECT * FROM "HOWTO_DB"."PUBLIC"."CDC_POSTGRESDB_INVENTORY_PRODUCT"; -- One row per event in Kafka topic postgresdb.inventory.product
+USE ROLE ACCOUNTADMIN;
+USE SCHEMA HOWTO_DB.PUBLIC;
+SELECT * FROM CDC_MYSQL_INVENTORY_USERS;
+SELECT * FROM CDC_POSTGRESDB_INVENTORY_PRODUCT;
 ```
 
-## Change events table to replica tables
+Adding new changes in your dockerized databases produces new rows in your tables.
 
-We have two change event tables, one with data from our MySQL database and another from PostgreSQL. In the repository, we provide two SQL scripts to generate a replica view for each table and all needed Snowflake resources. The steps that follow these SQL scripts are:
+1. In Snowflake Worksheet:
+    ```sql
+    SELECT 'Events MySQL', COUNT(1) FROM CDC_MYSQL_INVENTORY_USERS
+    UNION ALL
+    SELECT 'Events PostgreSQL', COUNT(1) FROM CDC_POSTGRESDB_INVENTORY_PRODUCT;
+    ```
+2. From a terminal, apply changes in your databases:
+   ```sh
+   cd database
+   ./mysql_crud.sh
+   ./postgres_crud.sh
+   ```
+3. Wait until the events will be sent to Snowflake (you can see the log in docker-compose terminal)
+4. Repeat the query in Snowflake Worksheet
 
-* Create a table to store the last event for each entity of your model (the replica table)
-* Create a view from this replica table that only shows the entity like the source database, not the columns of metadata used in the consolidation process
-* Create a stream to cache the new change events sent by the Snowflake Sink Connector
-* A MERGE sentence that fills the replica table from all data of the change events table. This query has a dependency of the source database engine to order the events using the source database sequence (binlog position for MySQL, and LSN for PostgreSQL)
-* A task, triggered by time, that check if exist new data in the stream and update the replica table from the stream (not from all change events table)
-* Enable the task execution (remember, you need EXECUTE TASK privilege)
-* Some useful queries like check task execution history and or some stats about the number of events in change events table an replica table
+### 2.3 Apply replication logic
 
-After running the previous steps and we have the change events in Snowflake, then you can run snowflake/sql/01-cdc-to-replica-mysql.sql and snowflake/sql/01-cdc-to-replica-postgres.sql in Snowflake Worksheet to create and configure these Snowflake resources.
+In the repository I provide two scripts with the SQL logic to generate the replica of the source tables:
+* `snowflake/sql/01-cdc-to-replica-mysql.sql`
+* `snowflake/sql/01-cdc-to-replica-postgres.sql`
 
-To validate it, you can run this shell script to get the content of the MySQL table:
+From your Snowflake Worksheet, execute these two scripts. As result, you have two views with the same structure of the source databases:
+* `MYSQL_INVENTORY_USERS`
+* `POSTGRESDB_INVENTORY_PRODUCT`
 
-```sh
-cd services
-echo "SELECT * FROM users ORDER BY id" | docker-compose -f docker-compose.yml \
-    exec -T mysql \
-    bash -c 'mysql -u $MYSQL_USER -p$MYSQL_PASSWORD inventory'
-```
+These scripts follow the same logic, creating a scheduled task that process the new events arrived and update the replica table
 
-And compare with the Snowflake replica table in the Snowflake Worksheet:
-```sql
-SELECT * FROM "HOWTO_DB"."PUBLIC"."MYSQL_INVENTORY_USERS" ORDER BY ID;
-```
+![replication](.images/solution-replication.png)
 
-The same to check PostgreSQL:
-```sh
-cd services
-echo "SELECT * FROM product ORDER BY id" |  docker-compose -f docker-compose.yml \
-    exec -T postgres \
-    env PGOPTIONS="--search_path=inventory" \
-    bash -c 'psql -U $POSTGRES_USER postgres'
-```
+> Note: one part of these SQL scripts (the MERGE sentence) depends on which database engine generate the events. The Debezium events have the metadata about the source engine and is used to know which is the last event for an entity. Take into account if you replicate this logic in your production systems.
 
-```sql
-SELECT * FROM "HOWTO_DB"."PUBLIC"."POSTGRESDB_INVENTORY_PRODUCT" ORDER BY ID;
-```
+### 2.4 Check data replication
 
-You can add new CRUD operations in the source database and validate the results in Snowflake using this script (remember that the Snowflake Sink Connector add a delay, the replication task is configured to run each minute, and the solution has eventually consistence: the events may be sended/process in Snowflake in order, but not in the same batch) 
-
-```sh
-cd database
-./mysql_crud.sh
-./postgres_crud.sh
-```
+The end-to-end is running now. You can check the data available in your local databases and validate against Snowaflake view:
+1. In a terminal, get the actual state of MySQL users table:
+   ```sh
+   cd services
+   echo "SELECT * FROM users ORDER BY id" | docker-compose \
+      exec -T mysql \
+      bash -c 'mysql -u $MYSQL_USER -p$MYSQL_PASSWORD inventory'
+   ```
+2. Goto Snowflake Worksheet and validate the result with:
+   ```sql
+   USE ROLE ACCOUNTADMIN;
+   USE SCHEMA HOWTO_DB.PUBLIC;
+   SELECT * FROM MYSQL_INVENTORY_USERS;
+   ```
+3. In a terminal, get the actual state of PostgreSQL product table
+   ```sh
+   cd services
+   echo "SELECT * FROM product ORDER BY id" |  docker-compose \
+      exec -T postgres \
+      env PGOPTIONS="--search_path=inventory" \
+      bash -c 'psql -U $POSTGRES_USER postgres'
+   ```
+4. And validate in Snowflake Worksheet.
+   ```sql
+   USE ROLE ACCOUNTADMIN;
+   USE SCHEMA HOWTO_DB.PUBLIC;
+   SELECT * FROM POSTGRESDB_INVENTORY_PRODUCT;
+   ```
+5. Generate new insert-delete-update operations from a terminal:
+   ```sh
+   cd database
+   ./mysql_crud.sh
+   ./postgres_crud.sh
+   ```
+6. Wait until the events was sent to Snowflake (review docker-compose terminal log)
+7. Wait until the scheduled task was triggered in Snowflake
+   ```sql
+   USE ROLE ACCOUNTADMIN;
+   select name, state, error_code, error_message,scheduled_time, next_scheduled_time
+      from table(HOWTO_DB.information_schema.task_history())
+      order by scheduled_time desc;
+   ```
+8. Validate again the content of the tables in Snowflake
 
 # Conclusions
 
