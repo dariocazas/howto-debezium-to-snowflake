@@ -110,8 +110,8 @@ It can take several minutes to download and start the services. Keep this termin
 ### 2.2. Prepare databases
 
 I provide SQL initialization scripts:
-* database/sql/00_mysql_init.sql: create table `users`
-* database/sql/00_postgres_init.sql: create table `product`
+* `database/sql/00_mysql_init.sql`: create table `users`
+* `database/sql/00_postgres_init.sql`: create table `product`
 
 Init these tables over the dockerized services:
 
