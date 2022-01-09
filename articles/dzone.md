@@ -1,6 +1,6 @@
 # Introduction
 
-This article is a follow-up to the [Data Platform: Building an Enterprise CDC Solution](https://dzone.com/articles/data-platform-building-an-enterprise-cdc-solution), where [Miguel García](https://dzone.com/articles/data-platform-building-an-enterprise-cdc-solution) and I described:
+This article is a follow-up to the [Data Platform: Building an Enterprise CDC Solution](https://dzone.com/articles/data-platform-building-an-enterprise-cdc-solution), where [Miguel García](https://dzone.com/users/4531976/miguelglor.html) and I described:
 
 * Several CDC (Change Data Capture) use cases and common scenarios in an enterprise platform
 * A proposal using Debezium (as log-based CDC) to capture data from the relational databases, and Kafka like a channel that enables several consumers to propagate data changes for different use cases.
