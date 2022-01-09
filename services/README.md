@@ -70,7 +70,7 @@ docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-console-consume
 # Show all CDC Posgres data
 docker-compose -f docker-compose.yml exec kafka /kafka/bin/kafka-console-consumer.sh \
     --bootstrap-server kafka:9092 --from-beginning \
-    --topic postgres.inventory.product
+    --topic postgresdb.inventory.product
 ```
 
 #### Database commands
