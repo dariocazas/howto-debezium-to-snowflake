@@ -12,6 +12,9 @@
         "database.include": "inventory",
         "database.history.kafka.bootstrap.servers": "kafka:9092",
         "database.history.kafka.topic": "mysqldb.schema-changes.inventory",
-        "table.include.list": "inventory.users"
+        "table.include.list": "inventory.users",
+        "transforms": "unwrap",
+        "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+        "transforms.unwrap.add.fields": "op,source.ts_ms"
     }
 }

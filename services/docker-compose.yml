@@ -106,7 +106,7 @@ services:
       - -c
       - |
         echo "Installing Connector"
-        confluent-hub install --no-prompt snowflakeinc/snowflake-kafka-connector:1.5.5
+        confluent-hub install --no-prompt snowflakeinc/snowflake-kafka-connector:latest
         #
         echo "Launching Kafka Connect worker"
         /etc/confluent/docker/run &

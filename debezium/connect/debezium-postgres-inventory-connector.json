@@ -10,6 +10,9 @@
         "database.dbname": "postgres",
         "database.server.name": "postgresdb",
         "schema.include": "inventory",
-        "table.include.list": "inventory.product"
+        "table.include.list": "inventory.product",
+        "transforms": "unwrap",
+        "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+        "transforms.unwrap.add.fields": "op,source.ts_ms"
     }
 }
