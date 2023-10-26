@@ -3,16 +3,21 @@
   "config": {
     "connector.class": "com.snowflake.kafka.connector.SnowflakeSinkConnector",
     "tasks.max": "1",
+    "snowflake.ingestion.method": "SNOWPIPE_STREAMING",
+    "snowflake.enable.schematization": true,
     "topics": "mysqldb.inventory.users,postgresdb.inventory.product",
     "snowflake.topic2table.map": "mysqldb.inventory.users:cdc_mysql_inventory_users,postgresdb.inventory.product:cdc_postgresdb_inventory_product",
-    "snowflake.url.name": "mh16247.eu-west-2.aws.snowflakecomputing.com:443",
-    "snowflake.user.name": "dariocazas",
-    "snowflake.private.key": "MIIFLTBXBgkqhkiG9w0BBQ0wSjApBgkqhkiG9w0BBQwwHAQIHl29yM4BvgICAggAMAwGCCqGSIb3DQIJBQAwHQYJYIZIAWUDBAEqBBCkFIfNB88Urq5VaPCCzze1BIIE0In6kYmdUnVvH5Q+nPXkPj3VCXd0/aPceHSbC4BsWRtli39bIrWCch1EQXZxoj3xt8QNtOL9XGKH3XqG9rYpu0VmR2MZjC+FteNZ98RXrDqdwkoN/ZWTeaQ+MaeZtiCn93N3dhh70Woee/JgVEcO38vV/i0eJ4ryM07a0eV4d5Y8JQHRBoVVxTPm0Ha/af+p7loS5AKvwfiHndFgQPNbILfweGuhRUe8AQf9Bo0vzeXHBj5nO4RqnaTcfmRDIul4ZtMD7zxxTMJnhezTGFDPqlxEvOOZAudakm01C3y5mfPUs+veMWjNcz0AfPPeyvJPO5Xmu7kiIGtM1UHRojnQOtZ9QWBmhLfMsRZ3GbVbycCLgZOKhW1OIy+PbbykiiRQD6AHszJiFKroZz3yqMRTh9QJFJ4mpa6XjkLGCE8CiPns5Tl7qX2BN78Qs5vxsWJC0Z7wqNuoldsNSFKVtfW6Qm81j12XQw1fsk5zqCnabpsiK/uWo1NowhEa5xAAeRW95wqTyWYi0tu8/u3EQo/xwBCCbDiYFxvbbOmWZjsxf95sO5yHrBxGTs8wCduj0I1UqTXWzTZ4JoAPdSFHwLS61slvujqlSvNvla12nqTYGBtWO/qgLh5egaTmGupLhu4b6FiO5CCXg4sfyOoKeZtykbM0wT0Ud8oK8fx9HwlUNxAaW8NrIo3EuRg7dsKdhtD2hJrqM1dyorVIT7bHSJ5YRLfXHdFGnmaOmJOGvMqXC2yfivEFbMI0nxnrJGDJ4KLS9a8DLmgsQZS8PySmWS+cGuvq4nUcxHnhX/j0ZWCZhSUxQ/z/lRx+RmZM+ey/PnzBuOQGaQrIHe44taN2skz97oopQu9lS6OANE9TPG1Vp1NqanU2Mxkz07++5swdeYp0WEJLWhkLpn3Ce7ImcceLlFI0B9TlAih4rEiE3REfbGCTvLKpaRPHmwYNmZIAhlhKm0Q+v/4Isk4hpce5MuOTiR7yz4neV3VCl66sw7o3tJSRnXtoVKFA2QlN0emdOj6ji0iPvRtKsU/9r8+8EkO3WTg/YO59aLM/pX8V9Rd87jnDidLuO2gVzIsghRiElg2g/4cC9zmvBSZLfF/TJZGs6pX9WxDh3VjLEjdqvU8weepk/LrxyJADp7Up7GuALSytFaMbDPRTLXICsu5q0C/ne//sHeVjiKcz0WgIzeUGqC4wt7ht/G1DDd4/gxAp6ZPmlnh5WjNPTtmfU2TVV14EYUs9UzrUYm+2G0uG/+da+WpB6hRKZkHNSoFKVq3g5IHlB2Lc7SFKYnQhpHxmpmCeoQ2/DlzSWS/EHrV54ej68TdPa2MnrrdeeDCGB3Oo4oSmHSh0bTO4vVOLS9ezLDiFfT0KnhI2HmN3JOGm/2njXwp/qnk3oscyYIxBocsmYeQ91EfS9M4iNjryFNLHNuyWq/9WsDF/LrWPJIoQ+7qZm9AmLZ9yx3ED8YbqIjiK1Q48gl0NwpyvCFEfWDCjmxUA+W1SnAhf4VK3pRLBbkr5UwNcW+FSQWNtoZ8eHASDab5l4HH1NoswYqzEc4jmssQG+3nDimNvenbXvuOjwMF9+wC5LVryysZ2nMeKql4lSr8hlHe4xkvquTyPbJCSsViAueAHmHxSNW/i6QVNukc24UtP",
-    "snowflake.private.key.passphrase": "mypassphrase",
-    "snowflake.database.name": "HOWTO_DB",
-    "snowflake.schema.name": "public",
-    "key.converter": "com.snowflake.kafka.connector.records.SnowflakeJsonConverter",
-    "value.converter": "com.snowflake.kafka.connector.records.SnowflakeJsonConverter",
-    "behavior.on.null.values": "IGNORE"
+    "snowflake.url.name": "https://<YOUR_ACCOUNT>.snowflakecomputing.com",
+    "snowflake.user.name": "poc_confluent",
+    "snowflake.role.name": "SYSADMIN",
+    "snowflake.private.key": "<YOUR_PRIVATE_KEY>",
+    "snowflake.private.key.passphrase": "<YOUR_PRIVATE_KEY_PASSPHRASE>",
+    "snowflake.database.name": "<YOUR_DB_NAME>",
+    "snowflake.warehouse.name": "<YOUR_DW-NAME>",
+    "snowflake.schema.name": "PUBLIC",
+    "behavior.on.null.values": "IGNORE",
+    "transforms": "transform_0",
+    "transforms.transform_0.type": "org.apache.kafka.connect.transforms.Flatten$Value",
+    "transforms.transform_0.delimiter": "."
   }
 }
